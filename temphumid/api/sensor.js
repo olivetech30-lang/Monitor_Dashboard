@@ -10,13 +10,12 @@ export default async function handler(req, res) {
     }
     
     const now = new Date().toISOString();
-    latest = { temp, humid, timestamp: now };
+    latest = { temp, humid, timestamp: now };  // Now accessible globally
     
-    // Log only if changed significantly (0.2°C or 1%)
     const lastLog = history[history.length - 1];
     if (!lastLog || Math.abs(lastLog.temp - temp) >= 0.2 || Math.abs(lastLog.humid - humid) >= 1) {
         history.push({ temp, humid, timestamp: now });
-        if (history.length > 1000) history.shift(); // Limit size
+        if (history.length > 1000) history.shift();
     }
     
     res.status(200).json({ success: true });
