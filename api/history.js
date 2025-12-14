@@ -1,16 +1,27 @@
-import { createClient } from '@supabase/supabase-js';
+// /api/history.js
+const { createClient } = require('@supabase/supabase-js');
 
-const supabase = createClient(
-  'https://uappuwebcylzwndfaqxo.supabase.co',
-  process.env.SUPABASE_KEY
-);
+module.exports = async (req, res) => {
+  const supabase = createClient(
+    'https://uappuwebcylzwndfaqxo.supabase.co',
+    process.env.SUPABASE_KEY
+  );
 
-export default async function handler(req, res) {
-  const { data } = await supabase
-    .from('readings')
-    .select('timestamp, temperature, humidity')
-    .order('timestamp', { ascending: false })
-    .limit(50);
+  try {
+    const { data, error } = await supabase
+      .from('readings')
+      .select('timestamp, temperature, humidity')
+      .order('timestamp', { ascending: false })
+      .limit(50);
 
-  res.json(data || []);
-}
+    if (error) {
+      console.error('Supabase error:', error.message);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    res.status(200).json(data || []);
+  } catch (err) {
+    console.error('Unexpected error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};

@@ -2,12 +2,10 @@
 const { createClient } = require('@supabase/supabase-js');
 
 module.exports = async (req, res) => {
-  // Allow only POST
   if (req.method !== 'POST') {
     return res.status(405).end('Method Not Allowed');
   }
 
-  // Parse body manually (Vercel doesn't auto-parse)
   let data;
   try {
     data = JSON.parse(req.body);
@@ -17,25 +15,22 @@ module.exports = async (req, res) => {
 
   const { temperature, humidity } = data;
 
-  // Validate
   if (typeof temperature !== 'number' || typeof humidity !== 'number') {
     return res.status(400).json({ error: 'temperature and humidity must be numbers' });
   }
 
-  // Supabase setup — using YOUR project
+  // 🔥 FIX: Remove trailing spaces in URL!
   const supabase = createClient(
     'https://uappuwebcylzwndfaqxo.supabase.co',
     process.env.SUPABASE_KEY
   );
 
-  // Critical: Check if key is missing
   if (!process.env.SUPABASE_KEY) {
-    console.error('❌ SUPABASE_KEY is not set in Vercel environment variables!');
+    console.error('❌ SUPABASE_KEY missing!');
     return res.status(500).json({ error: 'Missing API key' });
   }
 
   try {
-    // Fetch last reading
     const { data: lastReadings, error: fetchErr } = await supabase
       .from('readings')
       .select('temperature, humidity')
@@ -43,7 +38,7 @@ module.exports = async (req, res) => {
       .limit(1);
 
     if (fetchErr) {
-      console.error('Supabase fetch error:', fetchErr.message);
+      console.error('Fetch error:', fetchErr.message);
       return res.status(500).json({ error: 'DB fetch failed' });
     }
 
@@ -58,7 +53,7 @@ module.exports = async (req, res) => {
         .insert([{ temperature, humidity }]);
 
       if (insertErr) {
-        console.error('Supabase insert error:', insertErr.message);
+        console.error('Insert error:', insertErr.message);
         return res.status(500).json({ error: 'DB insert failed' });
       }
     }
