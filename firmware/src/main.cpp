@@ -10,7 +10,6 @@ const char* password = "cd6c696d";
 
 // Vercel API Endpoint
 const char* serverUrl = "https://monitor-webdashboard.vercel.app/api/sensor";
-
 // DHT Sensor Setup
 #define DHTPIN 38
 #define DHTTYPE DHT22
@@ -19,10 +18,13 @@ DHT dht(DHTPIN, DHTTYPE);
 // Variables for change detection
 float lastTemperature = 0;
 float lastHumidity = 0;
-const float CHANGE_THRESHOLD = 0.1; // Only send if change > 0.1
+const float CHANGE_THRESHOLD = 0.1;
 
 unsigned long lastReadTime = 0;
-const unsigned long readInterval = 2000; // Read every 2 seconds
+const unsigned long readInterval = 2000;
+
+// === FUNCTION DECLARATION (ADD THIS BEFORE setup()) ===
+bool sendToServer(float temperature, float humidity);
 
 void setup() {
   Serial.begin(115200);
@@ -46,6 +48,42 @@ void setup() {
   Serial.println("\nConnected to WiFi!");
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
+}
+
+// === FUNCTION DEFINITION (CAN BE AFTER setup()) ===
+bool sendToServer(float temperature, float humidity) {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi not connected!");
+    return false;
+  }
+  
+  HTTPClient http;
+  http.begin(serverUrl);
+  http.addHeader("Content-Type", "application/json");
+  
+  // Create JSON payload - ONLY columns that exist in your table
+  StaticJsonDocument<200> jsonDoc;
+  jsonDoc["temperature"] = round(temperature * 100) / 100.0;  // 2 decimals
+  jsonDoc["humidity"] = round(humidity * 100) / 100.0;        // 2 decimals
+  jsonDoc["sensor_id"] = "00000000-0000-0000-0000-000000000001";
+  
+  String jsonString;
+  serializeJson(jsonDoc, jsonString);
+  
+  Serial.print("Sending JSON: ");
+  Serial.println(jsonString);
+  
+  int httpCode = http.POST(jsonString);
+  String response = http.getString();
+  
+  Serial.print("HTTP Response code: ");
+  Serial.println(httpCode);
+  Serial.print("Response: ");
+  Serial.println(response);
+  
+  http.end();
+  
+  return (httpCode == 200);
 }
 
 void loop() {
@@ -89,39 +127,4 @@ void loop() {
       Serial.println("No significant change, skipping send.");
     }
   }
-}
-
-bool sendToServer(float temperature, float humidity) {
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi not connected!");
-    return false;
-  }
-  
-  HTTPClient http;
-  http.begin(serverUrl);
-  http.addHeader("Content-Type", "application/json");
-  
-  // Create JSON payload
-  StaticJsonDocument<200> jsonDoc;
-  jsonDoc["temperature"] = temperature;
-  jsonDoc["humidity"] = humidity;
-  jsonDoc["device_id"] = "esp32-s3-dht22-001";
-  
-  String jsonString;
-  serializeJson(jsonDoc, jsonString);
-  
-  Serial.print("Sending JSON: ");
-  Serial.println(jsonString);
-  
-  int httpCode = http.POST(jsonString);
-  String response = http.getString();
-  
-  Serial.print("HTTP Response code: ");
-  Serial.println(httpCode);
-  Serial.print("Response: ");
-  Serial.println(response);
-  
-  http.end();
-  
-  return (httpCode == 200);
 }
