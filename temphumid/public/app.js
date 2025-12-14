@@ -18,6 +18,9 @@ let pollIntervalMs = 2000;
 let historyLimit = 200;
 let latestSeenTs = null;
 
+// ------------------------------
+// 1. UTILITY FUNCTIONS
+// ------------------------------
 function fmtNum(n, digits = 1) {
   if (typeof n !== "number" || !Number.isFinite(n)) return "--";
   return n.toFixed(digits);
@@ -33,8 +36,10 @@ function fmtTs(iso) {
   }
 }
 
+// ------------------------------
+// 2. STATUS UPDATER
+// ------------------------------
 function setStatus(state, text) {
-  // state: ok | warn | bad
   const colors = {
     ok: "rgba(77,214,165,0.18)",
     warn: "rgba(255,211,106,0.14)",
@@ -46,39 +51,58 @@ function setStatus(state, text) {
   els.statusPill.style.borderColor = "rgba(255,255,255,0.16)";
 }
 
+// ------------------------------
+// 3. API FETCH WITH ERROR HANDLING
+// ------------------------------
 async function fetchJson(url) {
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    console.log(`📡 ${url} response:`, data); // DEBUG LOG
+    return data;
+  } catch (e) {
+    console.error(`❌ Fetch error (${url}):`, e);
+    throw e;
+  }
 }
 
+// ------------------------------
+// 4. RENDER LATEST DATA (FIXED)
+// ------------------------------
 function renderLatest(latest) {
-  const t = latest?.temperature;
-  const h = latest?.humidity;
-  const ts = latest?.timestamp;
+  // Handle cases where `latest` might be undefined/null
+  const t = latest?.temperature ?? null;
+  const h = latest?.humidity ?? null;
+  const ts = latest?.timestamp ?? null;
 
-  els.tempValue.textContent = fmtNum(t, 1);
-  els.humValue.textContent = fmtNum(h, 1);
-  els.tempTs.textContent = fmtTs(ts);
-  els.humTs.textContent = fmtTs(ts);
+  // Update DOM elements safely
+  if (els.tempValue) els.tempValue.textContent = fmtNum(t, 1);
+  if (els.humValue) els.humValue.textContent = fmtNum(h, 1);
+  if (els.tempTs) els.tempTs.textContent = fmtTs(ts);
+  if (els.humTs) els.humTs.textContent = fmtTs(ts);
 }
 
+// ------------------------------
+// 5. RENDER HISTORY (FIXED)
+// ------------------------------
 function renderHistory(rows) {
-  els.historyCount.textContent = String(rows.length);
+  if (els.historyCount) els.historyCount.textContent = String(rows.length);
 
-  if (!rows.length) {
-    els.historyBody.innerHTML = `
-      <tr>
-        <td colspan="3" class="muted">No change events yet.</td>
-      </tr>
-    `;
+  if (!rows?.length) {
+    if (els.historyBody) {
+      els.historyBody.innerHTML = `
+        <tr>
+          <td colspan="3" class="muted">No change events yet.</td>
+        </tr>
+      `;
+    }
     return;
   }
 
-  // newest first
-  const html = rows
-    .slice()
-    .reverse()
+  // Always show newest entries first (API returns oldest-first)
+  const reversedRows = [...rows].reverse();
+  const html = reversedRows
     .map(r => `
       <tr>
         <td>${fmtTs(r.timestamp)}</td>
@@ -88,29 +112,33 @@ function renderHistory(rows) {
     `)
     .join("");
 
-  els.historyBody.innerHTML = html;
+  if (els.historyBody) els.historyBody.innerHTML = html;
 }
 
+// ------------------------------
+// 6. REFRESH LATEST DATA (CRITICAL FIX)
+// ------------------------------
 async function refreshLatest() {
   try {
     const data = await fetchJson("/api/latest");
-    const latest = data.latest;
+    
+    // ⚠️ API NOW RETURNS { ok, changed, latest: { ... } }
+    const latest = data.latest; 
 
-    // status
+    // Status handling
     if (!latest?.timestamp) {
       setStatus("warn", "● Waiting for sensor");
-      renderLatest(latest);
+      renderLatest(null); // Pass null to clear values
       return;
     }
 
     renderLatest(latest);
 
-    // If latest timestamp changed, optionally refresh history
+    // Track new data for history refresh
     if (latestSeenTs !== latest.timestamp) {
       latestSeenTs = latest.timestamp;
-      setStatus("ok", "● Live");
-      // lightweight: only refresh history when something new arrives
-      await refreshHistory();
+      setStatus("ok", `● Live (${fmtNum(latest.temperature, 1)}°C)`);
+      await refreshHistory(); // Refresh history on new data
     } else {
       setStatus("ok", "● Live");
     }
@@ -119,16 +147,24 @@ async function refreshLatest() {
   }
 }
 
+// ------------------------------
+// 7. REFRESH HISTORY
+// ------------------------------
 async function refreshHistory() {
   try {
     const data = await fetchJson(`/api/history?limit=${encodeURIComponent(historyLimit)}`);
     renderHistory(Array.isArray(data.history) ? data.history : []);
-  } catch {
-    // ignore
+  } catch (e) {
+    console.warn("History refresh skipped:", e);
   }
 }
 
+// ------------------------------
+// 8. NAVIGATION HANDLER
+// ------------------------------
 function bindNav() {
+  if (!els.navItems) return;
+
   els.navItems.forEach(btn => {
     btn.addEventListener("click", () => {
       els.navItems.forEach(b => b.classList.remove("active"));
@@ -141,37 +177,69 @@ function bindNav() {
         data: "dataCard",
         settings: "settingsCard",
       };
-      const id = map[section];
-      const target = document.getElementById(id);
-      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+      const targetId = map[section];
+      const target = document.getElementById(targetId);
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   });
 }
 
+// ------------------------------
+// 9. CONTROL HANDLERS
+// ------------------------------
 function bindControls() {
-  els.refreshBtn.addEventListener("click", refreshHistory);
-  els.clearUiBtn.addEventListener("click", () => renderHistory([]));
+  if (els.refreshBtn) {
+    els.refreshBtn.addEventListener("click", refreshHistory);
+  }
+  if (els.clearUiBtn) {
+    els.clearUiBtn.addEventListener("click", () => {
+      if (els.historyBody) renderHistory([]);
+      setStatus("warn", "● Cleared");
+    });
+  }
 
-  els.applyBtn.addEventListener("click", () => {
-    const ms = Number(els.pollMs.value);
-    const lim = Number(els.historyLimit.value);
+  if (els.applyBtn) {
+    els.applyBtn.addEventListener("click", () => {
+      const ms = Number(els.pollMs?.value);
+      const lim = Number(els.historyLimit?.value);
 
-    if (Number.isFinite(ms) && ms >= 500) pollIntervalMs = ms;
-    if (Number.isFinite(lim) && lim >= 10) historyLimit = lim;
+      if (ms >= 500) pollIntervalMs = ms;
+      if (lim >= 10) historyLimit = lim;
 
-    startPolling();
-  });
+      startPolling();
+      setStatus("ok", "● Settings applied");
+    });
+  }
 }
 
+// ------------------------------
+// 10. POLLING LOGIC
+// ------------------------------
 let pollTimer = null;
 function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
-  // immediate refresh
-  refreshLatest();
+  refreshLatest(); // Immediate refresh
   pollTimer = setInterval(refreshLatest, pollIntervalMs);
 }
 
+// ------------------------------
+// 11. INITIALIZATION
+// ------------------------------
 (function init() {
+  console.log("🚀 Application initializing...");
+
+  // Validate critical DOM elements
+  const requiredElements = [
+    "statusPill", "tempValue", "humValue",
+    "tempTs", "humTs", "historyBody"
+  ];
+  const missing = requiredElements.filter(id => !document.getElementById(id));
+  
+  if (missing.length > 0) {
+    console.error("❌ Missing critical elements:", missing);
+    return; // Stop if UI is broken
+  }
+
   bindNav();
   bindControls();
   setStatus("warn", "● Connecting");
