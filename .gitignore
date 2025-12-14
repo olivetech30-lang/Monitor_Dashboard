@@ -1,0 +1,13 @@
+# Node
+node_modules/
+
+# Vercel
+.vercel/
+
+# PlatformIO
+.pio/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
