@@ -1,39 +1,37 @@
-const { createClient } = require('@supabase/supabase-js');
+import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  'https://uappuwebcylzwndfaqxo.supabase.co',
+  process.env.SUPABASE_KEY
 );
 
-module.exports = async (req, res) => {
-  // Allow browser and ESP32 access
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-
-  try {
-    const { temperature, humidity, deviceId = "esp32-s3" } = req.body;
-
-    // 1. Insert data into your 'readings' table
-    const { data, error } = await supabase
-      .from('readings')
-      .insert([{ temperature, humidity, device_id: deviceId }])
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    // 2. Return success to ESP32
-    return res.status(200).json({ 
-      ok: true, 
-      latest: { 
-        temperature: data.temperature, 
-        humidity: data.humidity, 
-        timestamp: data.created_at 
-      } 
-    });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: err.message });
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).end();
+  
+  const { temperature, humidity } = req.body;
+  if (typeof temperature !== 'number' || typeof humidity !== 'number') {
+    return res.status(400).json({ error: 'Invalid payload' });
   }
-};
+
+  // Fetch last reading
+  const { data: last } = await supabase
+    .from('readings')
+    .select('temperature, humidity')
+    .order('timestamp', { ascending: false })
+    .limit(1);
+
+  // Only log if changed
+  const changed = !last?.[0] ||
+    Math.abs(last[0].temperature - temperature) > 0.1 ||
+    Math.abs(last[0].humidity - humidity) > 0.1;
+
+  if (changed) {
+    const { error } = await supabase
+      .from('readings')
+      .insert([{ temperature, humidity }]);
+      
+    if (error) return res.status(500).json({ error: error.message });
+  }
+
+  res.status(200).json({ success: true });
+}
