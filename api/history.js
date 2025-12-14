@@ -1,27 +1,39 @@
-// /api/history.js
-const { createClient } = require('@supabase/supabase-js');
+import { createClient } from '@supabase/supabase-js';
 
-module.exports = async (req, res) => {
-  const supabase = createClient(
-    'https://uappuwebcylzwndfaqxo.supabase.co',
-    process.env.SUPABASE_KEY
-  );
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+const DEFAULT_SENSOR_ID = '00000000-0000-0000-0000-000000000001';
+
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
   try {
-    const { data, error } = await supabase
-      .from('readings')
-      .select('timestamp, temperature, humidity')
-      .order('timestamp', { ascending: false })
-      .limit(50);
+    const { limit = 100 } = req.query;
+
+    const { data: changes, error } = await supabase
+      .from('value_changes')
+      .select('*')
+      .eq('sensor_id', DEFAULT_SENSOR_ID)
+      .order('recorded_at', { ascending: false })
+      .limit(parseInt(limit));
 
     if (error) {
-      console.error('Supabase error:', error.message);
-      return res.status(500).json({ error: 'Database error' });
+      throw error;
     }
 
-    res.status(200).json(data || []);
-  } catch (err) {
-    console.error('Unexpected error:', err);
-    res.status(500).json({ error: 'Server error' });
+    res.setHeader('Cache-Control', 'no-cache');
+    res.status(200).json({
+      success: true,
+      data: changes || [],
+      count: changes?.length || 0
+    });
+
+  } catch (error) {
+    console.error('Error fetching history:', error);
+    res.status(500).json({ error: 'Failed to fetch history' });
   }
-};
+}
