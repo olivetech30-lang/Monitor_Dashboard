@@ -1,14 +1,12 @@
-// api/latest.js
+a// api/latest.js
+import { getStore } from "./_store.js";
+
 export default function handler(req, res) {
-  try {
-    // TEMP: log something simple to be sure function runs
-    // and always return valid JSON
-    res.status(200).json({
-      temp: null,
-      humid: null
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal error' });
+  if (req.method !== "GET") {
+    res.setHeader("Allow", "GET");
+    return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
+
+  const store = getStore();
+  return res.status(200).json({ ok: true, latest: store.latest });
 }
