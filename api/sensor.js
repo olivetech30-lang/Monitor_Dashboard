@@ -1,26 +1,45 @@
 // /api/sensor.js
 const { createClient } = require('@supabase/supabase-js');
 
+// ✅ Properly read raw body from stream
+function getRawBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.setEncoding('utf8');
+    req.on('data', (chunk) => {
+      body += chunk;
+    });
+    req.on('end', () => {
+      resolve(body);
+    });
+    req.on('error', reject);
+  });
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Only POST allowed' });
   }
 
-  // Clean and parse body
-  let cleanBody = req.body;
-  if (typeof cleanBody === 'string') {
-    cleanBody = cleanBody.trim().replace(/\0/g, '');
+  // ✅ Await raw body
+  let rawBody;
+  try {
+    rawBody = await getRawBody(req);
+  } catch (e) {
+    return res.status(400).json({ error: 'Failed to read request body' });
   }
 
+  // ✅ Clean and parse
+  const cleanBody = rawBody.trim().replace(/\0/g, '');
   if (!cleanBody) {
-    return res.status(400).json({ error: 'Empty request body' });
+    return res.status(400).json({ error: 'Empty body' });
   }
 
   let data;
   try {
     data = JSON.parse(cleanBody);
   } catch (e) {
-    console.error('JSON parse error. Raw body:', req.body);
+    console.error('❌ Raw body received:', rawBody);
     return res.status(400).json({ error: 'Invalid JSON' });
   }
 
@@ -29,49 +48,38 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'temperature and humidity must be numbers' });
   }
 
-  // Connect to Supabase
+  // Continue with Supabase...
   const supabase = createClient(
     'https://uappuwebcylzwndfaqxo.supabase.co',
     process.env.SUPABASE_KEY
   );
 
   if (!process.env.SUPABASE_KEY) {
-    console.error('❌ SUPABASE_KEY missing in Vercel env vars');
-    return res.status(500).json({ error: 'Server misconfiguration' });
+    return res.status(500).json({ error: 'Missing SUPABASE_KEY' });
   }
 
   try {
-    // Fetch last reading to detect change
-    const {  lastReadings, error: fetchErr } = await supabase
+    const {  lastReadings } = await supabase
       .from('readings')
       .select('temperature, humidity')
       .order('recorded_at', { ascending: false })
       .limit(1);
 
-    if (fetchErr) {
-      console.error('Supabase fetch error:', fetchErr.message);
-      return res.status(500).json({ error: 'Database fetch failed' });
-    }
-
     const last = lastReadings?.[0];
-    const hasChanged = !last ||
+    const changed = !last ||
       Math.abs(parseFloat(last.temperature) - temperature) > 0.1 ||
       Math.abs(parseFloat(last.humidity) - humidity) > 0.1;
 
-    if (hasChanged) {
-      const { error: insertErr } = await supabase
+    if (changed) {
+      const { error } = await supabase
         .from('readings')
         .insert([{ temperature, humidity }]);
 
-      if (insertErr) {
-        console.error('Supabase insert error:', insertErr.message);
-        return res.status(500).json({ error: 'Database insert failed' });
-      }
-    } 
+      if (error) return res.status(500).json({ error: 'Database insert failed' });
+    }
 
     res.status(200).json({ success: true });
   } catch (err) {
-    console.error('Unexpected error:', err.message);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Server error' });
   }
 };
