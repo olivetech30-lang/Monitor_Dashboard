@@ -5,8 +5,9 @@
 #include <ArduinoJson.h>
 
 // === CONFIGURATION ===
-const char* ssid = "FFC-MISC";  //  REPLACE WITH YOUR ESP32'S WIFI NAME (NO PASSWORD)
-const char* serverUrl = "https://monitor-webdashboard.vercel.app/api/sensor";
+const char* ssid = "HUAWEI Baig";  //  REPLACE WITH YOUR ESP32'S WIFI NAME (NO PASSWORD)
+const char* password = "cd6c696d";
+const char* serverUrl = "https://monitor-dashboard-newf.vercel.app/api/sensor";
 
 #define DHTPIN 38
 #define DHTTYPE DHT22
@@ -32,7 +33,7 @@ void setup() {
   Serial.printf("Connecting to open Wi-Fi: %s\n", ssid);
 
   // Connect to OPEN Wi-Fi (empty password)
-  WiFi.begin(ssid, "");
+  WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
