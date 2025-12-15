@@ -67,7 +67,7 @@ module.exports = async (req, res) => {
         console.error('Supabase insert error:', insertErr.message);
         return res.status(500).json({ error: 'Database insert failed' });
       }
-    }
+    } 
 
     res.status(200).json({ success: true });
   } catch (err) {
