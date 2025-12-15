@@ -6,32 +6,43 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: 'Only POST allowed' });
   }
 
+  // Clean and parse body
+  let cleanBody = req.body;
+  if (typeof cleanBody === 'string') {
+    cleanBody = cleanBody.trim().replace(/\0/g, '');
+  }
+
+  if (!cleanBody) {
+    return res.status(400).json({ error: 'Empty request body' });
+  }
+
   let data;
   try {
-    data = JSON.parse(req.body);
+    data = JSON.parse(cleanBody);
   } catch (e) {
+    console.error('JSON parse error. Raw body:', req.body);
     return res.status(400).json({ error: 'Invalid JSON' });
   }
 
   const { temperature, humidity } = data;
-
   if (typeof temperature !== 'number' || typeof humidity !== 'number') {
     return res.status(400).json({ error: 'temperature and humidity must be numbers' });
   }
 
+  // Connect to Supabase
   const supabase = createClient(
     'https://uappuwebcylzwndfaqxo.supabase.co',
     process.env.SUPABASE_KEY
   );
 
   if (!process.env.SUPABASE_KEY) {
-    console.error('❌ SUPABASE_KEY is missing');
+    console.error('❌ SUPABASE_KEY missing in Vercel env vars');
     return res.status(500).json({ error: 'Server misconfiguration' });
   }
 
   try {
-    // Fetch last reading using recorded_at
-    const { data: lastReadings, error: fetchErr } = await supabase
+    // Fetch last reading to detect change
+    const {  lastReadings, error: fetchErr } = await supabase
       .from('readings')
       .select('temperature, humidity')
       .order('recorded_at', { ascending: false })
@@ -50,7 +61,7 @@ module.exports = async (req, res) => {
     if (hasChanged) {
       const { error: insertErr } = await supabase
         .from('readings')
-        .insert([{ temperature, humidity }]); // recorded_at auto-filled by now()
+        .insert([{ temperature, humidity }]);
 
       if (insertErr) {
         console.error('Supabase insert error:', insertErr.message);
