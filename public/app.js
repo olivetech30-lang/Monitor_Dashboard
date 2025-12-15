@@ -59,7 +59,7 @@ async function fetchJson(url) {
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    console.log(`📡 ${url} response:`, data); // DEBUG LOG
+    console.log(`📡 ${url} response:`, data);
     return data;
   } catch (e) {
     console.error(`❌ Fetch error (${url}):`, e);
@@ -68,23 +68,30 @@ async function fetchJson(url) {
 }
 
 // ------------------------------
-// 4. RENDER LATEST DATA (FIXED)
+// 4. RENDER LATEST DATA
 // ------------------------------
 function renderLatest(latest) {
-  // Handle cases where `latest` might be undefined/null
-  const t = latest?.temperature ?? null;
-  const h = latest?.humidity ?? null;
-  const ts = latest?.timestamp ?? null;
+  if (!latest) {
+    if (els.tempValue) els.tempValue.textContent = "--";
+    if (els.humValue) els.humValue.textContent = "--";
+    if (els.tempTs) els.tempTs.textContent = "—";
+    if (els.humTs) els.humTs.textContent = "—";
+    return;
+  }
 
-  // Update DOM elements safely
-  if (els.tempValue) els.tempValue.textContent = fmtNum(t, 1);
-  if (els.humValue) els.humValue.textContent = fmtNum(h, 1);
+  // Use recorded_at (your actual column name)
+  const ts = latest.recorded_at || latest.timestamp;
+  const t = latest.temperature;
+  const h = latest.humidity;
+
+  if (els.tempValue) els.tempValue.textContent = fmtNum(t, 1) + " °C";
+  if (els.humValue) els.humValue.textContent = fmtNum(h, 1) + " %";
   if (els.tempTs) els.tempTs.textContent = fmtTs(ts);
   if (els.humTs) els.humTs.textContent = fmtTs(ts);
 }
 
 // ------------------------------
-// 5. RENDER HISTORY (FIXED)
+// 5. RENDER HISTORY
 // ------------------------------
 function renderHistory(rows) {
   if (els.historyCount) els.historyCount.textContent = String(rows.length);
@@ -100,45 +107,44 @@ function renderHistory(rows) {
     return;
   }
 
-  // Always show newest entries first (API returns oldest-first)
+  // Show newest first
   const reversedRows = [...rows].reverse();
   const html = reversedRows
-    .map(r => `
-      <tr>
-        <td>${fmtTs(r.timestamp)}</td>
-        <td>${fmtNum(r.temperature, 1)}</td>
-        <td>${fmtNum(r.humidity, 1)}</td>
-      </tr>
-    `)
+    .map(r => {
+      const ts = r.recorded_at || r.timestamp;
+      return `
+        <tr>
+          <td>${fmtTs(ts)}</td>
+          <td>${fmtNum(r.temperature, 1)}</td>
+          <td>${fmtNum(r.humidity, 1)}</td>
+        </tr>
+      `;
+    })
     .join("");
 
   if (els.historyBody) els.historyBody.innerHTML = html;
 }
 
 // ------------------------------
-// 6. REFRESH LATEST DATA (CRITICAL FIX)
+// 6. REFRESH LATEST DATA (FIXED)
 // ------------------------------
 async function refreshLatest() {
   try {
-    const data = await fetchJson("/api/latest");
-    
-    // ⚠️ API NOW RETURNS { ok, changed, latest: { ... } }
-    const latest = data.latest; 
+    // ✅ Your API returns flat object — no .latest wrapper
+    const latest = await fetchJson("/api/latest");
 
-    // Status handling
-    if (!latest?.timestamp) {
+    if (!latest?.recorded_at) {
       setStatus("warn", "● Waiting for sensor");
-      renderLatest(null); // Pass null to clear values
+      renderLatest(null);
       return;
     }
 
     renderLatest(latest);
 
-    // Track new data for history refresh
-    if (latestSeenTs !== latest.timestamp) {
-      latestSeenTs = latest.timestamp;
+    if (latestSeenTs !== latest.recorded_at) {
+      latestSeenTs = latest.recorded_at;
       setStatus("ok", `● Live (${fmtNum(latest.temperature, 1)}°C)`);
-      await refreshHistory(); // Refresh history on new data
+      await refreshHistory();
     } else {
       setStatus("ok", "● Live");
     }
@@ -152,8 +158,9 @@ async function refreshLatest() {
 // ------------------------------
 async function refreshHistory() {
   try {
-    const data = await fetchJson(`/api/history?limit=${encodeURIComponent(historyLimit)}`);
-    renderHistory(Array.isArray(data.history) ? data.history : []);
+    // ✅ Your API returns flat array — no .history wrapper
+    const rows = await fetchJson(`/api/history?limit=${encodeURIComponent(historyLimit)}`);
+    renderHistory(Array.isArray(rows) ? rows : []);
   } catch (e) {
     console.warn("History refresh skipped:", e);
   }
@@ -218,7 +225,7 @@ function bindControls() {
 let pollTimer = null;
 function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
-  refreshLatest(); // Immediate refresh
+  refreshLatest();
   pollTimer = setInterval(refreshLatest, pollIntervalMs);
 }
 
@@ -226,9 +233,8 @@ function startPolling() {
 // 11. INITIALIZATION
 // ------------------------------
 (function init() {
-  console.log("🚀 Application initializing...");
+  console.log("🚀 ClimateCloud Dashboard initializing...");
 
-  // Validate critical DOM elements
   const requiredElements = [
     "statusPill", "tempValue", "humValue",
     "tempTs", "humTs", "historyBody"
@@ -237,7 +243,7 @@ function startPolling() {
   
   if (missing.length > 0) {
     console.error("❌ Missing critical elements:", missing);
-    return; // Stop if UI is broken
+    return;
   }
 
   bindNav();
