@@ -59,6 +59,7 @@
           </div>
         </article>
 
+    
         <article class="card" id="humCard">
           <div class="card-head">
             <h2>Humidity</h2>
@@ -98,6 +99,39 @@
             This dashboard polls <code>/api/latest</code> and refreshes history periodically.
           </p>
         </article>
+
+<!-- HISTORY SECTION (HIDDEN BY DEFAULT) -->
+<article class="card full-page" id="historySection" style="display:none;">
+  <div class="card-head">
+    <h2>Timeseries History</h2>
+    <div class="actions">
+      <button class="btn" id="refreshHistoryBtn">🔄 Refresh</button>
+      <button class="btn btn-ghost" id="clearUiBtn">Clear UI</button>
+    </div>
+  </div>
+
+  <div class="table-wrap full-height">
+    <table class="table" aria-label="Full history">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Temperature (°C)</th>
+          <th>Humidity (%)</th>
+        </tr>
+      </thead>
+      <tbody id="historyBodyFull">
+        <tr>
+          <td colspan="3" class="muted">Loading history...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="meta">
+    <div>Entries: <span id="historyCountFull">0</span></div>
+  </div>
+</article>
+
       </section>
     </main>
   </div>

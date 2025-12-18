@@ -315,3 +315,24 @@ input:focus{
   .table{ min-width: 520px; }
 }
 
+/* Full-page history view */
+#historySection.full-page {
+  grid-column: 1 / -1;
+  display: none;
+}
+
+#historySection.active {
+  display: block;
+}
+
+.table-wrap.full-height {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 600px;
+}
+
+@media (min-width: 768px) {
+  .table-wrap.full-height {
+    max-height: 70vh;
+  }
+}

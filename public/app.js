@@ -102,41 +102,101 @@ async function refreshLatest() {
 }
 
 // ------------------------------
-// 6. NAVIGATION HANDLER
+// 6. REFRESH HISTORY (FULL TABLE)
+// ------------------------------
+async function refreshHistoryFull() {
+  try {
+    const res = await fetch('/api/history');
+    const rows = await res.json();
+    const tbody = document.getElementById('historyBodyFull');
+    const countEl = document.getElementById('historyCountFull');
+
+    if (!rows?.length) {
+      tbody.innerHTML = `<tr><td colspan="3" class="muted">No change events recorded yet.</td></tr>`;
+      countEl.textContent = '0';
+      return;
+    }
+
+    countEl.textContent = rows.length;
+    tbody.innerHTML = rows
+      .reverse()
+      .map(r => `
+        <tr>
+          <td>${fmtTs(r.recorded_at)}</td>
+          <td>${fmtNum(r.temperature, 1)}</td>
+          <td>${fmtNum(r.humidity, 1)}</td>
+        </tr>
+      `)
+      .join('');
+  } catch (e) {
+    console.error('History fetch failed:', e);
+    const tbody = document.getElementById('historyBodyFull');
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="3" class="muted">Failed to load history</td></tr>`;
+    }
+  }
+}
+
+// ------------------------------
+// 7. NAVIGATION HANDLER (SPA)
 // ------------------------------
 function bindNav() {
   els.navItems.forEach(btn => {
     btn.addEventListener("click", () => {
-      // Update active state
+      // Update active nav
       els.navItems.forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
 
+      // Hide all sections
+      const allSections = ["tempCard", "humCard", "settingsCard", "historySection"];
+      allSections.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = "none";
+      });
+
+      // Show selected section
       const section = btn.dataset.section;
-
-      // Handle History: open new tab
       if (section === "history") {
-        window.open('/history.html', 'climatecloud_history', 'width=1000,height=700');
-        return;
-      }
+        const historySection = document.getElementById("historySection");
+        if (historySection) {
+          historySection.style.display = "block";
+          refreshHistoryFull();
 
-      // Handle other sections
-      const sectionMap = {
-        temperature: "tempCard",
-        humidity: "humCard",
-        settings: "settingsCard",
-      };
+          // Bind history-specific buttons
+          const refreshBtn = document.getElementById("refreshHistoryBtn");
+          const clearBtn = document.getElementById("clearUiBtn");
 
-      const targetId = sectionMap[section];
-      const target = document.getElementById(targetId);
-      if (target) {
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
+          if (refreshBtn) {
+            refreshBtn.onclick = refreshHistoryFull;
+          }
+          if (clearBtn) {
+            clearBtn.onclick = () => {
+              const tbody = document.getElementById("historyBodyFull");
+              if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="3" class="muted">Cleared.</td></tr>`;
+              }
+            };
+          }
+        }
+      } else {
+        const map = {
+          temperature: "tempCard",
+          humidity: "humCard",
+          settings: "settingsCard",
+        };
+        const targetId = map[section];
+        const target = document.getElementById(targetId);
+        if (target) {
+          target.style.display = "block";
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
       }
     });
   });
 }
 
 // ------------------------------
-// 7. SETTINGS HANDLER
+// 8. SETTINGS HANDLER
 // ------------------------------
 function bindSettings() {
   if (els.applyBtn) {
@@ -154,7 +214,7 @@ function bindSettings() {
 }
 
 // ------------------------------
-// 8. POLLING
+// 9. POLLING
 // ------------------------------
 let pollTimer = null;
 function startPolling() {
@@ -164,12 +224,11 @@ function startPolling() {
 }
 
 // ------------------------------
-// 9. INIT
+// 10. INIT
 // ------------------------------
 (function init() {
   console.log("🚀 ClimateCloud Dashboard initializing...");
 
-  // Only require elements that always exist
   const requiredElements = [
     "statusPill", "tempValue", "humValue",
     "tempTs", "humTs"
@@ -186,3 +245,4 @@ function startPolling() {
   setStatus("warn", "● Connecting");
   startPolling();
 })();
+
