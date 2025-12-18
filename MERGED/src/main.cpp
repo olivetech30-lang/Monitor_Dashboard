@@ -218,6 +218,10 @@ void sendSensorData() {
 // ============================================
 // FETCH DELAY FROM API
 // ============================================
+
+// ============================================
+// FETCH DELAY FROM API
+// ============================================
 void fetchDelayFromAPI() {
     httpDelay.begin(secureClient, API_URL_DELAY);
     httpDelay.addHeader("Content-Type", "application/json");
@@ -236,9 +240,14 @@ void fetchDelayFromAPI() {
             if (newDelay != blinkDelay) {
                 Serial.println("\n★ DELAY CHANGED: " + String(newDelay) + "ms");
                 blinkDelay = newDelay;
+                Serial.print("[LED] New blink delay: ");
+                Serial.println(blinkDelay);
             }
         }
     }
 
     httpDelay.end();
 }
+
+
+

@@ -1,12 +1,13 @@
+
 // /api/delay.js
+let currentDelay = 500; // Global variable to store delay
+
 const { createClient } = require('@supabase/supabase-js');
 
 module.exports = async (req, res) => {
   if (req.method === 'GET') {
-    // Return current delay
-    res.json({ delay: 500 }); // You can store this in Supabase if needed
+    res.json({ delay: currentDelay });
   } else if (req.method === 'POST') {
-    // Update delay
     let data;
     try {
       data = JSON.parse(req.body);
@@ -19,9 +20,8 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Delay must be between 50 and 2000' });
     }
 
-    // Store in memory or Supabase (optional)
-    // For now, just return it
-    res.json({ delay });
+    currentDelay = delay; // ✅ Save it!
+    res.json({ delay: currentDelay });
   } else {
     res.status(405).end();
   }
