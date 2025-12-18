@@ -208,6 +208,22 @@ function bindNav() {
       }
     });
   });
+}// ------------------------------
+// 8. SETTINGS HANDLER
+// ------------------------------
+function bindSettings() {
+  if (els.applyBtn) {
+    els.applyBtn.addEventListener("click", () => {
+      const ms = Number(els.pollMs?.value);
+      const lim = Number(els.historyLimit?.value);
+
+      if (ms >= 500) pollIntervalMs = ms;
+      if (lim >= 10) historyLimit = lim;
+
+      startPolling();
+      setStatus("ok", "● Settings applied");
+    });
+  }
 }
 
 // ... (rest unchanged until init)
