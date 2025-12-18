@@ -223,8 +223,12 @@ void fetchDelayFromAPI() {
     httpDelay.addHeader("Content-Type", "application/json");
 
     int httpCode = httpDelay.GET();
+
     if (httpCode == HTTP_CODE_OK) {
         String payload = httpDelay.getString();
+        Serial.print("[Delay] Raw response: ");
+        Serial.println(payload); // ← LOG RAW RESPONSE
+
         StaticJsonDocument<256> doc;
         DeserializationError error = deserializeJson(doc, payload);
 
@@ -232,17 +236,25 @@ void fetchDelayFromAPI() {
             int newDelay = doc["delay"].as<int>();
             newDelay = max(MIN_DELAY, min(MAX_DELAY, newDelay));
 
+            Serial.print("[Delay] Received: ");
+            Serial.print(newDelay);
+            Serial.println("ms");
+
             if (newDelay != blinkDelay) {
-                Serial.println("\n★ DELAY CHANGED: " + String(newDelay) + "ms");
+                Serial.println("\n★ DELAY CHANGED!");
                 blinkDelay = newDelay;
-                Serial.print("[LED] New blink delay: ");
-                Serial.println(blinkDelay);
             }
+        } else {
+            Serial.println("[Delay] JSON parse failed");
         }
+    } else {
+        Serial.printf("[Delay] HTTP Error: %d\n", httpCode);
     }
 
     httpDelay.end();
 }
+
+
 
 
 
