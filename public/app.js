@@ -137,6 +137,9 @@ async function refreshHistoryFull() {
   }
 }
 
+
+// ... (all code above remains the same until bindNav)
+
 // ------------------------------
 // 7. NAVIGATION HANDLER (SPA)
 // ------------------------------
@@ -156,13 +159,24 @@ function bindNav() {
 
       // Show selected section
       const section = btn.dataset.section;
-      if (section === "history") {
+
+      if (section === "dashboard") {
+        // Show main dashboard cards
+        const tempCard = document.getElementById("tempCard");
+        const humCard = document.getElementById("humCard");
+        const settingsCard = document.getElementById("settingsCard");
+
+        if (tempCard) tempCard.style.display = "block";
+        if (humCard) humCard.style.display = "block";
+        if (settingsCard) settingsCard.style.display = "block";
+
+        document.querySelector('.main').scrollTo(0, 0);
+      } else if (section === "history") {
         const historySection = document.getElementById("historySection");
         if (historySection) {
           historySection.style.display = "block";
           refreshHistoryFull();
 
-          // Bind history-specific buttons
           const refreshBtn = document.getElementById("refreshHistoryBtn");
           const clearBtn = document.getElementById("clearUiBtn");
 
@@ -179,6 +193,7 @@ function bindNav() {
           }
         }
       } else {
+        // Handle temperature, humidity, settings
         const map = {
           temperature: "tempCard",
           humidity: "humCard",
@@ -195,33 +210,7 @@ function bindNav() {
   });
 }
 
-// ------------------------------
-// 8. SETTINGS HANDLER
-// ------------------------------
-function bindSettings() {
-  if (els.applyBtn) {
-    els.applyBtn.addEventListener("click", () => {
-      const ms = Number(els.pollMs?.value);
-      const lim = Number(els.historyLimit?.value);
-
-      if (ms >= 500) pollIntervalMs = ms;
-      if (lim >= 10) historyLimit = lim;
-
-      startPolling();
-      setStatus("ok", "● Settings applied");
-    });
-  }
-}
-
-// ------------------------------
-// 9. POLLING
-// ------------------------------
-let pollTimer = null;
-function startPolling() {
-  if (pollTimer) clearInterval(pollTimer);
-  refreshLatest();
-  pollTimer = setInterval(refreshLatest, pollIntervalMs);
-}
+// ... (rest unchanged until init)
 
 // ------------------------------
 // 10. INIT
@@ -244,5 +233,10 @@ function startPolling() {
   bindSettings();
   setStatus("warn", "● Connecting");
   startPolling();
-})();
 
+  // ✅ Auto-click Dashboard AFTER DOM is ready
+  const dashboardBtn = document.querySelector('.nav-item[data-section="dashboard"]');
+  if (dashboardBtn) {
+    dashboardBtn.click();
+  }
+})();
