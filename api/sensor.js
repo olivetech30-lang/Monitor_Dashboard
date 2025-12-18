@@ -1,9 +1,9 @@
 // /api/sensor.js
 const { createClient } = require('@supabase/supabase-js');
 
-// ✅ Properly read raw body from stream
+// Helper to read raw body from stream
 function getRawBody(req) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     let body = '';
     req.setEncoding('utf8');
     req.on('data', (chunk) => {
@@ -11,8 +11,7 @@ function getRawBody(req) {
     });
     req.on('end', () => {
       resolve(body);
-    });g
-    req.on('error', reject);
+    });
   });
 }
 
@@ -21,7 +20,7 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: 'Only POST allowed' });
   }
 
-  // ✅ Await raw body
+  // Read raw body manually
   let rawBody;
   try {
     rawBody = await getRawBody(req);
@@ -29,7 +28,7 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'Failed to read request body' });
   }
 
-  // ✅ Clean and parse
+  // Clean and parse
   const cleanBody = rawBody.trim().replace(/\0/g, '');
   if (!cleanBody) {
     return res.status(400).json({ error: 'Empty body' });
@@ -39,7 +38,7 @@ module.exports = async (req, res) => {
   try {
     data = JSON.parse(cleanBody);
   } catch (e) {
-    console.error('❌ Raw body received:', rawBody);
+    console.error('Invalid JSON received:', cleanBody);
     return res.status(400).json({ error: 'Invalid JSON' });
   }
 
@@ -48,7 +47,7 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'temperature and humidity must be numbers' });
   }
 
-  // Continue with Supabase...
+  // Supabase
   const supabase = createClient(
     'https://uappuwebcylzwndfaqxo.supabase.co',
     process.env.SUPABASE_KEY
@@ -75,11 +74,15 @@ module.exports = async (req, res) => {
         .from('readings')
         .insert([{ temperature, humidity }]);
 
-      if (error) return res.status(500).json({ error: 'Database insert failed' });
+      if (error) {
+        console.error('Supabase insert error:', error.message);
+        return res.status(500).json({ error: 'Database error' });
+      }
     }
 
     res.status(200).json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    console.error('Server error:', err.message);
+    res.status(500).json({ error: 'Internal error' });
   }
 };

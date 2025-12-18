@@ -11,7 +11,6 @@
     <header class="topbar">
       <div class="brand">
         <div class="brand-icon" aria-hidden="true">
-          <!-- simple climate icon -->
           <svg viewBox="0 0 24 24" fill="none">
             <path d="M7 14a5 5 0 0 1 9.7-1.5A3.5 3.5 0 1 1 18 19H8.2A3.2 3.2 0 0 1 7 14Z"
               stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -20,7 +19,7 @@
         </div>
         <div>
           <div class="brand-name">ClimateCloud</div>
-          <div class="brand-sub">Real-time environmental monitoringA</div>
+          <div class="brand-sub">Real-time environmental monitoring</div>
         </div>
       </div>
 
@@ -31,11 +30,11 @@
 
     <aside class="sidebar">
       <nav class="nav">
-  <button class="nav-item" data-section="dashboard">Dashboard</button>
-  <button class="nav-item" data-section="temperature">Temperature</button>
-  <button class="nav-item" data-section="humidity">Humidity</button>
-  <button class="nav-item" data-section="history">History</button>
-  <button class="nav-item" data-section="settings">Settings</button>
+        <button class="nav-item active" data-section="dashboard">Dashboard</button>
+        <button class="nav-item" data-section="temperature">Temperature</button>
+        <button class="nav-item" data-section="humidity">Humidity</button>
+        <button class="nav-item" data-section="history">History</button>
+        <button class="nav-item" data-section="settings">Settings</button>
       </nav>
       <div class="sidebar-footer">
         <div class="muted">API</div>
@@ -46,6 +45,7 @@
 
     <main class="main">
       <section class="grid">
+        <!-- Row 1: Temperature + Humidity -->
         <article class="card" id="tempCard">
           <div class="card-head">
             <h2>Temperature</h2>
@@ -59,51 +59,6 @@
             <div>Last update: <span id="tempTs">—</span></div>
           </div>
         </article>
-
-    
-<!-- Add this inside <main class="main"> -->
-<article class="card span-2" id="flashController">
-  <div class="card-head">
-    <h2>Flash Controller</h2>
-    <span class="badge">Live</span>
-  </div>
-
-  <div class="metric">
-    <div class="metric-value" id="flashDelay">--</div>
-    <div class="metric-unit">ms</div>
-  </div>
-
-  <div class="meta">
-    <div>Status: <span id="flashStatus">—</span></div>
-  </div>
-
-  <div class="controls">
-    <button class="btn" id="fasterBtn">− FASTER</button>
-    <button class="btn btn-green" id="slowerBtn">+ SLOWER</button>
-  </div>
-
-  <div class="slider-container">
-    <input type="range" id="delaySlider" min="50" max="2000" value="500" step="50" />
-    <div class="slider-labels">
-      <span>50ms (Fast)</span>
-      <span>2000ms (Slow)</span>
-    </div>
-  </div>
-
-  <div class="presets">
-    <button class="btn btn-small" data-delay="100">100ms</button>
-    <button class="btn btn-small" data-delay="250">250ms</button>
-    <button class="btn btn-small" data-delay="500">500ms</button>
-    <button class="btn btn-small" data-delay="1000">1000ms</button>
-  </div>
-</article>
-
-
-
-
-
-
-
 
         <article class="card" id="humCard">
           <div class="card-head">
@@ -119,64 +74,88 @@
           </div>
         </article>
 
+        <!-- Row 2: Flash Controller (full width) -->
+        <article class="card span-2" id="flashController">
+          <div class="card-head">
+            <h2>Flash Controller</h2>
+            <span class="badge">Live</span>
+          </div>
+          <div class="metric">
+            <div class="metric-value" id="flashDelay">--</div>
+            <div class="metric-unit">ms</div>
+          </div>
+          <div class="meta">
+            <div>Status: <span id="flashStatus">—</span></div>
+          </div>
+          <div class="controls">
+            <button class="btn" id="fasterBtn">− FASTER</button>
+            <button class="btn btn-green" id="slowerBtn">+ SLOWER</button>
+          </div>
+          <div class="slider-container">
+            <input type="range" id="delaySlider" min="50" max="2000" value="500" step="50" />
+            <div class="slider-labels">
+              <span>50ms (Fast)</span>
+              <span>2000ms (Slow)</span>
+            </div>
+          </div>
+          <div class="presets">
+            <button class="btn btn-small" data-delay="100">100ms</button>
+            <button class="btn btn-small" data-delay="250">250ms</button>
+            <button class="btn btn-small" data-delay="500">500ms</button>
+            <button class="btn btn-small" data-delay="1000">1000ms</button>
+          </div>
+        </article>
 
-
+        <!-- Row 3: Settings (full width) -->
         <article class="card span-2" id="settingsCard">
           <div class="card-head">
             <h2>Settings</h2>
           </div>
-
           <div class="settings">
             <label class="field">
               <span>Polling interval (ms)</span>
               <input id="pollMs" type="number" min="500" step="250" value="2000" />
             </label>
-
             <label class="field">
               <span>History limit</span>
               <input id="historyLimit" type="number" min="10" step="10" value="200" />
             </label>
-
             <button class="btn" id="applyBtn">Apply</button>
           </div>
-
           <p class="muted small">
             This dashboard polls <code>/api/latest</code> and refreshes history periodically.
           </p>
         </article>
 
-<!-- HISTORY SECTION (HIDDEN BY DEFAULT) -->
-<article class="card full-page" id="historySection" style="display:none;">
-  <div class="card-head">
-    <h2>Timeseries History</h2>
-    <div class="actions">
-      <button class="btn" id="refreshHistoryBtn">🔄 Refresh</button>
-      <button class="btn btn-ghost" id="clearUiBtn">Clear UI</button>
-    </div>
-  </div>
-
-  <div class="table-wrap full-height">
-    <table class="table" aria-label="Full history">
-      <thead>
-        <tr>
-          <th>Timestamp</th>
-          <th>Temperature (°C)</th>
-          <th>Humidity (%)</th>
-        </tr>
-      </thead>
-      <tbody id="historyBodyFull">
-        <tr>
-          <td colspan="3" class="muted">Loading history...</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="meta">
-    <div>Entries: <span id="historyCountFull">0</span></div>
-  </div>
-</article>
-
+        <!-- Hidden: History Section -->
+        <article class="card full-page" id="historySection" style="display:none;">
+          <div class="card-head">
+            <h2>Timeseries History</h2>
+            <div class="actions">
+              <button class="btn" id="refreshHistoryBtn">🔄 Refresh</button>
+              <button class="btn btn-ghost" id="clearUiBtn">Clear UI</button>
+            </div>
+          </div>
+          <div class="table-wrap full-height">
+            <table class="table" aria-label="Full history">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Temperature (°C)</th>
+                  <th>Humidity (%)</th>
+                </tr>
+              </thead>
+              <tbody id="historyBodyFull">
+                <tr>
+                  <td colspan="3" class="muted">Loading history...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="meta">
+            <div>Entries: <span id="historyCountFull">0</span></div>
+          </div>
+        </article>
       </section>
     </main>
   </div>
