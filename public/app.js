@@ -259,10 +259,6 @@ function startPolling() {
 // FLASH CONTROLLER
 // ------------------------------
 
-// ------------------------------
-// FLASH CONTROLLER
-// ------------------------------
-
 const flashEls = {
   delayValue: document.getElementById("flashDelay"),
   status: document.getElementById("flashStatus"),
@@ -316,6 +312,8 @@ if (flashEls.fasterBtn) {
   flashEls.fasterBtn.addEventListener('click', () => {
     const newDelay = Math.max(MIN_DELAY, flashDelay - 50);
     updateFlashController(newDelay);
+
+    
     fetch('/api/delay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
