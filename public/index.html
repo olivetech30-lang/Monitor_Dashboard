@@ -61,6 +61,50 @@
         </article>
 
     
+<!-- Add this inside <main class="main"> -->
+<article class="card span-2" id="flashController">
+  <div class="card-head">
+    <h2>Flash Controller</h2>
+    <span class="badge">Live</span>
+  </div>
+
+  <div class="metric">
+    <div class="metric-value" id="flashDelay">--</div>
+    <div class="metric-unit">ms</div>
+  </div>
+
+  <div class="meta">
+    <div>Status: <span id="flashStatus">—</span></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="fasterBtn">− FASTER</button>
+    <button class="btn btn-green" id="slowerBtn">+ SLOWER</button>
+  </div>
+
+  <div class="slider-container">
+    <input type="range" id="delaySlider" min="50" max="2000" value="500" step="50" />
+    <div class="slider-labels">
+      <span>50ms (Fast)</span>
+      <span>2000ms (Slow)</span>
+    </div>
+  </div>
+
+  <div class="presets">
+    <button class="btn btn-small" data-delay="100">100ms</button>
+    <button class="btn btn-small" data-delay="250">250ms</button>
+    <button class="btn btn-small" data-delay="500">500ms</button>
+    <button class="btn btn-small" data-delay="1000">1000ms</button>
+  </div>
+</article>
+
+
+
+
+
+
+
+
         <article class="card" id="humCard">
           <div class="card-head">
             <h2>Humidity</h2>

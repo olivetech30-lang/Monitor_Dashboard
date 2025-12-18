@@ -336,3 +336,87 @@ input:focus{
     max-height: 70vh;
   }
 }
+
+#flashController {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+#flashController:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.075);
+}
+
+#flashController .metric-value {
+  font-size: 32px;
+  color: #4dd6a5;
+}
+
+#flashController .metric-unit {
+  color: var(--muted);
+}
+
+#flashController .controls {
+  display: flex;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+#flashController .btn {
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+#flashController .btn-green {
+  background: #55a6ff;
+  color: white;
+}
+
+#flashController .slider-container {
+  margin: 12px 0;
+}
+
+#flashController input[type="range"] {
+  width: 100%;
+  height: 5px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255,255,255,0.10);
+  border-radius: 5px;
+  outline: none;
+}
+
+#flashController input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #4dd6a5;
+  cursor: pointer;
+}
+
+#flashController .slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+#flashController .presets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+#flashController .btn-small {
+  padding: 6px 10px;
+  font-size: 12px;
+}

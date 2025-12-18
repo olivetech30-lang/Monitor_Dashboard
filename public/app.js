@@ -254,3 +254,101 @@ function startPolling() {
   const dashboardBtn = document.querySelector('.nav-item[data-section="dashboard"]');
   if (dashboardBtn) dashboardBtn.click();
 })();
+
+// ------------------------------
+// FLASH CONTROLLER
+// ------------------------------
+
+const flashEls = {
+  delayValue: document.getElementById("flashDelay"),
+  status: document.getElementById("flashStatus"),
+  slider: document.getElementById("delaySlider"),
+  fasterBtn: document.getElementById("fasterBtn"),
+  slowerBtn: document.getElementById("slowerBtn"),
+};
+
+let flashDelay = 500;
+
+function updateFlashController(delay) {
+  flashDelay = delay;
+  flashEls.delayValue.textContent = delay;
+  flashEls.slider.value = delay;
+}
+
+// Poll for delay changes
+async function pollFlashDelay() {
+  try {
+    const res = await fetch('/api/delay');
+    const data = await res.json();
+    updateFlashController(data.delay);
+    flashEls.status.textContent = "Connected";
+  } catch (e) {
+    flashEls.status.textContent = "Disconnected";
+  }
+}
+
+// Handle slider changes
+if (flashEls.slider) {
+  flashEls.slider.addEventListener('input', async () => {
+    const newDelay = parseInt(flashEls.slider.value);
+    updateFlashController(newDelay);
+    
+    // Send to ESP32
+    try {
+      const res = await fetch('/api/delay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ delay: newDelay })
+      });
+      if (res.ok) {
+        flashEls.status.textContent = "Connected";
+      }
+    } catch (e) {
+      flashEls.status.textContent = "Error";
+    }
+  });
+}
+
+// Handle button clicks
+if (flashEls.fasterBtn) {
+  flashEls.fasterBtn.addEventListener('click', () => {
+    const newDelay = Math.max(MIN_DELAY, flashDelay - 50);
+    updateFlashController(newDelay);
+    // Send to ESP32
+    fetch('/api/delay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ delay: newDelay })
+    });
+  });
+}
+
+if (flashEls.slowerBtn) {
+  flashEls.slowerBtn.addEventListener('click', () => {
+    const newDelay = Math.min(MAX_DELAY, flashDelay + 50);
+    updateFlashController(newDelay);
+    // Send to ESP32
+    fetch('/api/delay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ delay: newDelay })
+    });
+  });
+}
+
+// Handle preset buttons
+document.querySelectorAll('.btn[data-delay]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const delay = parseInt(btn.dataset.delay);
+    updateFlashController(delay);
+    // Send to ESP32
+    fetch('/api/delay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ delay })
+    });
+  });
+});
+
+// Start polling
+setInterval(pollFlashDelay, 3000);

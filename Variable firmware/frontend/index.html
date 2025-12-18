@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ESP32 LED Delay Control</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <h1>ESP32 LED Blink Control</h1>
+    
+    <div class="delay-display">
+      Current delay: <span id="delay-value">1000</span> ms
+    </div>
+
+    <div class="controls">
+      <button id="decrease">–</button>
+      <input 
+        type="range" 
+        id="delay-slider" 
+        min="500" 
+        max="5000" 
+        value="1000"
+        step="100"
+      />
+      <button id="increase">+</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
