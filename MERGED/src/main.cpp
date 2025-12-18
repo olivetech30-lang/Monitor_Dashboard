@@ -19,7 +19,7 @@ const char* WIFI_SSID = "Eagle";
 const char* WIFI_PASSWORD = "eagle786"; // ← CHANGE THIS!
 
 const char* API_URL_SENSOR = "https://monitor-dashboard-newf.vercel.app/api/sensor";
-const char* API_URL_DELAY = "https://flash-controller-full.vercel.app/api/delay";
+const char* API_URL_DELAY = "https://monitor-dashboard-newf.vercel.app/api/delay";
 
 // DHT22 Sensor
 #define DHTPIN 38
