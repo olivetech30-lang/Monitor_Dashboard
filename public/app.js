@@ -6,12 +6,12 @@ const els = {
   humValue: document.getElementById("humValue"),
   tempTs: document.getElementById("tempTs"),
   humTs: document.getElementById("humTs"),
-  historyBody: document.getElementById("historyBody"),
-  historyCount: document.getElementById("historyCount"),
-  refreshBtn: document.getElementById("refreshBtn"),
-  clearUiBtn: document.getElementById("clearUiBtn"),
+ // historyBody: document.getElementById("historyBody"),
+ // historyCount: document.getElementById("historyCount"),
+ // refreshBtn: document.getElementById("refreshBtn"),
+  //clearUiBtn: document.getElementById("clearUiBtn"),
   pollMs: document.getElementById("pollMs"),
-  historyLimit: document.getElementById("historyLimit"),
+ historyLimit: document.getElementById("historyLimit"),
   applyBtn: document.getElementById("applyBtn"),
   navItems: Array.from(document.querySelectorAll(".nav-item")),
 };
@@ -92,42 +92,7 @@ function renderLatest(latest) {
   if (els.humTs) els.humTs.textContent = fmtTs(ts);
 }
 
-// ------------------------------
-// 5. RENDER HISTORY
-// ------------------------------
-function renderHistory(rows) {
-  if (els.historyCount) els.historyCount.textContent = String(rows.length);
 
-  if (!rows?.length) {
-    if (els.historyBody) {
-      els.historyBody.innerHTML = `
-        <tr>
-          <td colspan="3" class="muted">No change events yet.</td>
-        </tr>
-      `;
-    }
-    return;
-  }
-
-  // Show newest first
-  const reversedRows = [...rows].reverse();
-  const html = reversedRows
-    .map(r => {
-      const ts = r.recorded_at || r.timestamp;
-      return `
-        <tr>
-          <td>${fmtTs(ts)}</td>
-          <td>${fmtNum(r.temperature, 1)}</td>
-          <td>${fmtNum(r.humidity, 1)}</td>
-        </tr>
-      `;
-    })
-    .join("");
-
-  if (els.historyBody) els.historyBody.innerHTML = html;
-}
-
-// ------------------------------
 // 6. REFRESH LATEST DATA (FIXED)
 // ------------------------------
 async function refreshLatest() {
@@ -146,7 +111,7 @@ async function refreshLatest() {
     if (latestSeenTs !== latest.recorded_at) {
       latestSeenTs = latest.recorded_at;
       setStatus("ok", `● Live (${fmtNum(latest.temperature, 1)}°C)`);
-      await refreshHistory();
+    //  await refreshHistory();
     } else {
       setStatus("ok", "● Live");
     }
@@ -155,68 +120,41 @@ async function refreshLatest() {
   }
 }
 
-// ------------------------------
-// 7. REFRESH HISTORY
-// ------------------------------
-async function refreshHistory() {
-  try {
-    // ✅ Your API returns flat array — no .history wrapper
-    const rows = await fetchJson(`/api/history?limit=${encodeURIComponent(historyLimit)}`);
-    renderHistory(Array.isArray(rows) ? rows : []);
-  } catch (e) {
-    console.warn("History refresh skipped:", e);
-  }
-}
 
 // ------------------------------
-// 8. NAVIGATION HANDLER
+// 8. NAVIGATION HANDLER (UPDATED)
 // ------------------------------
 function bindNav() {
-  if (!els.navItems) return;
-
+  // Handle main sections (Temp/Humidity/Settings)
   els.navItems.forEach(btn => {
-    btn.addEventListener("click", () => {
-      els.navItems.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
+    if (btn.dataset.section) {
+      btn.addEventListener("click", () => {
+        els.navItems.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
 
-      const section = btn.dataset.section;
-      const map = {
-        temperature: "tempCard",
-        humidity: "humCard",
-        data: "dataCard",
-        settings: "settingsCard",
-      };
-      const targetId = map[section];
-      const target = document.getElementById(targetId);
-      target?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+        const section = btn.dataset.section;
+        const map = {
+          temperature: "tempCard",
+          humidity: "humCard",
+          settings: "settingsCard",
+        };
+        const targetId = map[section];
+        const target = document.getElementById(targetId);
+        target?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
   });
-}
 
-// ------------------------------
-// 9. CONTROL HANDLERS
-// ------------------------------
-function bindControls() {
-  if (els.refreshBtn) {
-    els.refreshBtn.addEventListener("click", refreshHistory);
-  }
-  if (els.clearUiBtn) {
-    els.clearUiBtn.addEventListener("click", () => {
-      if (els.historyBody) renderHistory([]);
-      setStatus("warn", "● Cleared");
-    });
-  }
-
-  if (els.applyBtn) {
-    els.applyBtn.addEventListener("click", () => {
-      const ms = Number(els.pollMs?.value);
-      const lim = Number(els.historyLimit?.value);
-
-      if (ms >= 500) pollIntervalMs = ms;
-      if (lim >= 10) historyLimit = lim;
-
-      startPolling();
-      setStatus("ok", "● Settings applied");
+  // Handle "History" button (opens new window)
+  const historyBtn = document.getElementById("openHistoryBtn");
+  if (historyBtn) {
+    historyBtn.addEventListener("click", () => {
+      // Remove active from all
+      els.navItems.forEach(b => b.classList.remove("active"));
+      historyBtn.classList.add("active");
+      
+      // Open history in new tab
+      window.open('/history.html', 'climatecloud_history', 'width=1000,height=700');
     });
   }
 }

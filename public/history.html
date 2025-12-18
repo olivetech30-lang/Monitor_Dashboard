@@ -1,139 +1,97 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ClimateCloud</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <title>ClimateCloud History</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0b1220;
+      color: rgba(255,255,255,0.92);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin-bottom: 20px;
+      color: #4dd6a5;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: rgba(255,255,255,0.06);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    th {
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.75);
+    }
+    tr:hover {
+      background: rgba(85,166,255,0.08);
+    }
+    .loading { color: rgba(255,255,255,0.6); }
+  </style>
 </head>
 <body>
-  <div class="app">
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-icon" aria-hidden="true">
-          <!-- simple climate icon -->
-          <svg viewBox="0 0 24 24" fill="none">
-            <path d="M7 14a5 5 0 0 1 9.7-1.5A3.5 3.5 0 1 1 18 19H8.2A3.2 3.2 0 0 1 7 14Z"
-              stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 3v3M5 6l2 2M19 6l-2 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-          </svg>
-        </div>
-        <div>
-          <div class="brand-name">ClimateCloud</div>
-          <div class="brand-sub">Real-time environmental monitoringA</div>
-        </div>
-      </div>
-
-      <div class="topbar-right">
-        <div class="pill" id="statusPill">● Connecting</div>
-      </div>
-    </header>
-
-    <aside class="sidebar">
-      <nav class="nav">
-        <button class="nav-item active" data-section="temperature">Temperature</button>
-        <button class="nav-item" data-section="humidity">Humidity</button>
-        <button class="nav-item" data-section="data">Data</button>
-        <button class="nav-item" data-section="settings">Settings</button>
-      </nav>
-      <div class="sidebar-footer">
-        <div class="muted">API</div>
-        <code class="code">/api/latest</code>
-        <code class="code">/api/history</code>
-      </div>
-    </aside>
-
-    <main class="main">
-      <section class="grid">
-        <article class="card" id="tempCard">
-          <div class="card-head">
-            <h2>Temperature</h2>
-            <span class="badge">Live</span>
-          </div>
-          <div class="metric">
-            <div class="metric-value" id="tempValue">--</div>
-            <div class="metric-unit">°C</div>
-          </div>
-          <div class="meta">
-            <div>Last update: <span id="tempTs">—</span></div>
-          </div>
-        </article>
-
-        <article class="card" id="humCard">
-          <div class="card-head">
-            <h2>Humidity</h2>
-            <span class="badge">Live</span>
-          </div>
-          <div class="metric">
-            <div class="metric-value" id="humValue">--</div>
-            <div class="metric-unit">%</div>
-          </div>
-          <div class="meta">
-            <div>Last update: <span id="humTs">—</span></div>
-          </div>
-        </article>
-
-        <article class="card span-2" id="dataCard">
-          <div class="card-head">
-            <h2>Timeseries Log</h2>
-            <div class="actions">
-              <button class="btn" id="refreshBtn">Refresh</button>
-              <button class="btn btn-ghost" id="clearUiBtn" title="Clears table on the page only">
-                Clear UI
-              </button>
-            </div>
-          </div>
-
-          <div class="table-wrap">
-            <table class="table" aria-label="Temperature and humidity history">
-              <thead>
-                <tr>
-                  <th>Timestamp</th>
-                  <th>Temperature (°C)</th>
-                  <th>Humidity (%)</th>
-                </tr>
-              </thead>
-              <tbody id="historyBody">
-                <tr>
-                  <td colspan="3" class="muted">No data yet. Send sensor readings to <code>/api/sensor</code>.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="meta row">
-            <div>Showing last <span id="historyCount">0</span> change events</div>
-            <div class="muted">Logs only when values change</div>
-          </div>
-        </article>
-
-        <article class="card span-2" id="settingsCard">
-          <div class="card-head">
-            <h2>Settings</h2>
-          </div>
-
-          <div class="settings">
-            <label class="field">
-              <span>Polling interval (ms)</span>
-              <input id="pollMs" type="number" min="500" step="250" value="2000" />
-            </label>
-
-            <label class="field">
-              <span>History limit</span>
-              <input id="historyLimit" type="number" min="10" step="10" value="200" />
-            </label>
-
-            <button class="btn" id="applyBtn">Apply</button>
-          </div>
-
-          <p class="muted small">
-            This dashboard polls <code>/api/latest</code> and refreshes history periodically.
-          </p>
-        </article>
-      </section>
-    </main>
+  <div class="container">
+    <h1>ClimateCloud – Timeseries History</h1>
+    <table>
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Temperature (°C)</th>
+          <th>Humidity (%)</th>
+        </tr>
+      </thead>
+      <tbody id="historyBody">
+        <tr><td colspan="3" class="loading">Loading history...</td></tr>
+      </tbody>
+    </table>
   </div>
 
-  <script src="./app.js"></script>
+  <script>
+    async function loadHistory() {
+      try {
+        const res = await fetch('/api/history');
+        const rows = await res.json();
+        const tbody = document.getElementById('historyBody');
+        
+        if (!rows?.length) {
+          tbody.innerHTML = `<tr><td colspan="3" style="color:#ff6b6b">No data recorded yet.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = rows
+          .reverse() // newest first
+          .map(r => `
+            <tr>
+              <td>${new Date(r.recorded_at).toLocaleString()}</td>
+              <td>${r.temperature?.toFixed(1) ?? '--'}</td>
+              <td>${r.humidity?.toFixed(1) ?? '--'}</td>
+            </tr>
+          `)
+          .join('');
+      } catch (e) {
+        document.getElementById('historyBody').innerHTML = 
+          `<tr><td colspan="3" style="color:#ff6b6b">Failed to load history</td></tr>`;
+      }
+    }
+
+    // Load on page open
+    loadHistory();
+
+    // Optional: auto-refresh every 30s
+    setInterval(loadHistory, 30000);
+  </script>
 </body>
 </html>
