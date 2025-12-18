@@ -6,8 +6,8 @@
 #include <ArduinoJson.h>
 
 // === CONFIGURATION ===
-const char* ssid = "HUAWEI Baig";
-const char* password = "cd6c696d";
+const char* ssid = "FFC-MISC";
+//const char* password = "cd6c696d";
 const char* serverUrl = "https://monitor-dashboard-newf.vercel.app/api/sensor"; // NO TRAILING SPACES!
 
 #define DHTPIN 38
@@ -71,7 +71,7 @@ void setup() {
   delay(1000); // USB stability for ESP32-S3
 
   Serial.println("\n\n=== ClimateCloud ESP32-S3 Starting ===");
-  WiFi.begin(ssid, password);
+  WiFi.begin(ssid, "");
   Serial.printf("Connecting to Wi-Fi: %s\n", ssid);
 
   uint32_t timeout = millis();
