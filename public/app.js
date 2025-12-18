@@ -137,9 +137,6 @@ async function refreshHistoryFull() {
   }
 }
 
-
-// ... (all code above remains the same until bindNav)
-
 // ------------------------------
 // 7. NAVIGATION HANDLER (SPA)
 // ------------------------------
@@ -161,17 +158,16 @@ function bindNav() {
       const section = btn.dataset.section;
 
       if (section === "dashboard") {
-        // Show main dashboard cards
+        // Show main dashboard
         const tempCard = document.getElementById("tempCard");
         const humCard = document.getElementById("humCard");
         const settingsCard = document.getElementById("settingsCard");
-
         if (tempCard) tempCard.style.display = "block";
         if (humCard) humCard.style.display = "block";
         if (settingsCard) settingsCard.style.display = "block";
-
         document.querySelector('.main').scrollTo(0, 0);
       } else if (section === "history") {
+        // Show history
         const historySection = document.getElementById("historySection");
         if (historySection) {
           historySection.style.display = "block";
@@ -179,10 +175,7 @@ function bindNav() {
 
           const refreshBtn = document.getElementById("refreshHistoryBtn");
           const clearBtn = document.getElementById("clearUiBtn");
-
-          if (refreshBtn) {
-            refreshBtn.onclick = refreshHistoryFull;
-          }
+          if (refreshBtn) refreshBtn.onclick = refreshHistoryFull;
           if (clearBtn) {
             clearBtn.onclick = () => {
               const tbody = document.getElementById("historyBodyFull");
@@ -193,14 +186,13 @@ function bindNav() {
           }
         }
       } else {
-        // Handle temperature, humidity, settings
+        // Show single card (temp/hum/settings)
         const map = {
           temperature: "tempCard",
           humidity: "humCard",
           settings: "settingsCard",
         };
-        const targetId = map[section];
-        const target = document.getElementById(targetId);
+        const target = document.getElementById(map[section]);
         if (target) {
           target.style.display = "block";
           target.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -208,7 +200,9 @@ function bindNav() {
       }
     });
   });
-}// ------------------------------
+}
+
+// ------------------------------
 // 8. SETTINGS HANDLER
 // ------------------------------
 function bindSettings() {
@@ -216,17 +210,23 @@ function bindSettings() {
     els.applyBtn.addEventListener("click", () => {
       const ms = Number(els.pollMs?.value);
       const lim = Number(els.historyLimit?.value);
-
       if (ms >= 500) pollIntervalMs = ms;
       if (lim >= 10) historyLimit = lim;
-
       startPolling();
       setStatus("ok", "● Settings applied");
     });
   }
 }
 
-// ... (rest unchanged until init)
+// ------------------------------
+// 9. POLLING
+// ------------------------------
+let pollTimer = null;
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  refreshLatest();
+  pollTimer = setInterval(refreshLatest, pollIntervalMs);
+}
 
 // ------------------------------
 // 10. INIT
@@ -234,14 +234,14 @@ function bindSettings() {
 (function init() {
   console.log("🚀 ClimateCloud Dashboard initializing...");
 
+  // ✅ ONLY require elements that ALWAYS exist
   const requiredElements = [
-    "statusPill", "tempValue", "humValue",
-    "tempTs", "humTs"
+    "statusPill", "tempValue", "humValue", "tempTs", "humTs"
   ];
 
   const missing = requiredElements.filter(id => !document.getElementById(id));
   if (missing.length > 0) {
-    console.error("❌ Missing critical elements:", missing);
+    console.error("❌ Missing elements:", missing);
     return;
   }
 
@@ -250,9 +250,7 @@ function bindSettings() {
   setStatus("warn", "● Connecting");
   startPolling();
 
-  // ✅ Auto-click Dashboard AFTER DOM is ready
+  // Auto-open Dashboard on load
   const dashboardBtn = document.querySelector('.nav-item[data-section="dashboard"]');
-  if (dashboardBtn) {
-    dashboardBtn.click();
-  }
+  if (dashboardBtn) dashboardBtn.click();
 })();
