@@ -1,17 +1,11 @@
-
-
 const els = {
   statusPill: document.getElementById("statusPill"),
   tempValue: document.getElementById("tempValue"),
   humValue: document.getElementById("humValue"),
   tempTs: document.getElementById("tempTs"),
   humTs: document.getElementById("humTs"),
- // historyBody: document.getElementById("historyBody"),
- // historyCount: document.getElementById("historyCount"),
- // refreshBtn: document.getElementById("refreshBtn"),
-  //clearUiBtn: document.getElementById("clearUiBtn"),
   pollMs: document.getElementById("pollMs"),
- historyLimit: document.getElementById("historyLimit"),
+  historyLimit: document.getElementById("historyLimit"),
   applyBtn: document.getElementById("applyBtn"),
   navItems: Array.from(document.querySelectorAll(".nav-item")),
 };
@@ -54,19 +48,12 @@ function setStatus(state, text) {
 }
 
 // ------------------------------
-// 3. API FETCH WITH ERROR HANDLING
+// 3. API FETCH
 // ------------------------------
 async function fetchJson(url) {
-  try {
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    console.log(`📡 ${url} response:`, data);
-    return data;
-  } catch (e) {
-    console.error(`❌ Fetch error (${url}):`, e);
-    throw e;
-  }
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
 }
 
 // ------------------------------
@@ -74,30 +61,25 @@ async function fetchJson(url) {
 // ------------------------------
 function renderLatest(latest) {
   if (!latest) {
-    if (els.tempValue) els.tempValue.textContent = "--";
-    if (els.humValue) els.humValue.textContent = "--";
-    if (els.tempTs) els.tempTs.textContent = "—";
-    if (els.humTs) els.humTs.textContent = "—";
+    els.tempValue.textContent = "-- °C";
+    els.humValue.textContent = "-- %";
+    els.tempTs.textContent = "—";
+    els.humTs.textContent = "—";
     return;
   }
 
-  // Use recorded_at (your actual column name)
   const ts = latest.recorded_at || latest.timestamp;
-  const t = latest.temperature;
-  const h = latest.humidity;
-
-  if (els.tempValue) els.tempValue.textContent = fmtNum(t, 1) + " °C";
-  if (els.humValue) els.humValue.textContent = fmtNum(h, 1) + " %";
-  if (els.tempTs) els.tempTs.textContent = fmtTs(ts);
-  if (els.humTs) els.humTs.textContent = fmtTs(ts);
+  els.tempValue.textContent = fmtNum(latest.temperature, 1) + " °C";
+  els.humValue.textContent = fmtNum(latest.humidity, 1) + " %";
+  els.tempTs.textContent = fmtTs(ts);
+  els.humTs.textContent = fmtTs(ts);
 }
 
-
-// 6. REFRESH LATEST DATA (FIXED)
+// ------------------------------
+// 5. REFRESH LATEST DATA
 // ------------------------------
 async function refreshLatest() {
   try {
-    // ✅ Your API returns flat object — no .latest wrapper
     const latest = await fetchJson("/api/latest");
 
     if (!latest?.recorded_at) {
@@ -107,60 +89,72 @@ async function refreshLatest() {
     }
 
     renderLatest(latest);
-
     if (latestSeenTs !== latest.recorded_at) {
       latestSeenTs = latest.recorded_at;
       setStatus("ok", `● Live (${fmtNum(latest.temperature, 1)}°C)`);
-    //  await refreshHistory();
     } else {
       setStatus("ok", "● Live");
     }
   } catch (e) {
     setStatus("bad", "● Offline");
+    renderLatest(null);
   }
 }
 
-
 // ------------------------------
-// 8. NAVIGATION HANDLER (UPDATED)
+// 6. NAVIGATION HANDLER
 // ------------------------------
 function bindNav() {
-  // Handle main sections (Temp/Humidity/Settings)
   els.navItems.forEach(btn => {
-    if (btn.dataset.section) {
-      btn.addEventListener("click", () => {
-        els.navItems.forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-
-        const section = btn.dataset.section;
-        const map = {
-          temperature: "tempCard",
-          humidity: "humCard",
-          settings: "settingsCard",
-        };
-        const targetId = map[section];
-        const target = document.getElementById(targetId);
-        target?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    }
-  });
-
-  // Handle "History" button (opens new window)
-  const historyBtn = document.getElementById("openHistoryBtn");
-  if (historyBtn) {
-    historyBtn.addEventListener("click", () => {
-      // Remove active from all
+    btn.addEventListener("click", () => {
+      // Update active state
       els.navItems.forEach(b => b.classList.remove("active"));
-      historyBtn.classList.add("active");
-      
-      // Open history in new tab
-      window.open('/history.html', 'climatecloud_history', 'width=1000,height=700');
+      btn.classList.add("active");
+
+      const section = btn.dataset.section;
+
+      // Handle History: open new tab
+      if (section === "history") {
+        window.open('/history.html', 'climatecloud_history', 'width=1000,height=700');
+        return;
+      }
+
+      // Handle other sections
+      const sectionMap = {
+        temperature: "tempCard",
+        humidity: "humCard",
+        settings: "settingsCard",
+      };
+
+      const targetId = sectionMap[section];
+      const target = document.getElementById(targetId);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  });
+}
+
+// ------------------------------
+// 7. SETTINGS HANDLER
+// ------------------------------
+function bindSettings() {
+  if (els.applyBtn) {
+    els.applyBtn.addEventListener("click", () => {
+      const ms = Number(els.pollMs?.value);
+      const lim = Number(els.historyLimit?.value);
+
+      if (ms >= 500) pollIntervalMs = ms;
+      if (lim >= 10) historyLimit = lim;
+
+      startPolling();
+      setStatus("ok", "● Settings applied");
     });
   }
 }
 
 // ------------------------------
-// 10. POLLING LOGIC
+// 8. POLLING
 // ------------------------------
 let pollTimer = null;
 function startPolling() {
@@ -170,24 +164,25 @@ function startPolling() {
 }
 
 // ------------------------------
-// 11. INITIALIZATION
+// 9. INIT
 // ------------------------------
 (function init() {
   console.log("🚀 ClimateCloud Dashboard initializing...");
 
+  // Only require elements that always exist
   const requiredElements = [
     "statusPill", "tempValue", "humValue",
-    "tempTs", "humTs", "historyBody"
+    "tempTs", "humTs"
   ];
+
   const missing = requiredElements.filter(id => !document.getElementById(id));
-  
   if (missing.length > 0) {
     console.error("❌ Missing critical elements:", missing);
     return;
   }
 
   bindNav();
-  bindControls();
+  bindSettings();
   setStatus("warn", "● Connecting");
   startPolling();
 })();
