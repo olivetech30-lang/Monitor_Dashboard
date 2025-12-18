@@ -4,69 +4,66 @@
 #include <DHT.h>
 #include <ArduinoJson.h>
 
-// Only SSID is hardcoded — password entered via Serial
-const char* ssid = "Jazz 4G MIFI_BB76";  // ✅ SSID visible
-// ❌ Password NOT in code
-
-const char* serverUrl = "https://monitor-webdashboard.vercel.app/api/sensor";
+// === CONFIGURATION ===
+const char* ssid = "FFC-MISC";  //  REPLACE WITH YOUR ESP32'S WIFI NAME (NO PASSWORD)
+//const char* password = "cd6c696d";
+const char* serverUrl = "https://monitor-dashboard-newf.vercel.app/api/sensor";
+//                                                                       ^ no spaces!
 
 #define DHTPIN 38
 #define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
 
+// Change detection
 float lastTemperature = 0;
 float lastHumidity = 0;
 const float CHANGE_THRESHOLD = 0.1;
 
 unsigned long lastReadTime = 0;
-const unsigned long readInterval = 2000;
+const unsigned long readInterval = 2000; // Read every 2 seconds
 
+// === FUNCTION DECLARATIONS ===
 bool sendToServer(float temperature, float humidity);
-String readPasswordFromSerial();
 
 void setup() {
+  // Initialize serial with delay for USB stability (ESP32-S3)
   Serial.begin(115200);
-  delay(1000);
+  delay(1000); // Wait for USB enumeration
 
-  Serial.println("\n=== ClimateCloud ESP32-S3 Starting ===");
-  Serial.printf("SSID: %s\n", ssid);
-  Serial.println("Enter Wi-Fi password and press Enter:");
+  Serial.println("\n\n=== ClimateCloud ESP32-S3 Starting ===");
+  Serial.printf("Connecting to open Wi-Fi: %s\n", ssid);
 
-  String password = readPasswordFromSerial();
-  password.trim();
-
-  Serial.println("Connecting to WiFi...");
-  WiFi.begin(ssid, password.c_str());
+  // Connect to OPEN Wi-Fi (empty password)
+  WiFi.begin(ssid, "");
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
+    if (millis() > 10000) {
+      Serial.println("\n❌ Wi-Fi connection timeout!");
+      break;
+    }
   }
 
-  Serial.println("\n✅ Connected to WiFi!");
-  Serial.print("IP Address: ");
-  Serial.println(WiFi.localIP());
-  Serial.print("API Endpoint: ");
-  Serial.println(serverUrl);
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\n✅ Wi-Fi connected!");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("⚠️ Continuing without Wi-Fi...");
+  }
 
+  // Initialize sensor
   dht.begin();
   Serial.println("DHT22 sensor initialized");
-}
-
-String readPasswordFromSerial() {
-  String input = "";
-  while (input.length() == 0) {
-    if (Serial.available()) {
-      input = Serial.readStringUntil('\n');
-    }
-    delay(10);
-  }
-  return input;
+  Serial.print("Vercel Endpoint: ");
+  Serial.println(serverUrl);
+  Serial.println("----------------------------");
 }
 
 bool sendToServer(float temperature, float humidity) {
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi not connected!");
+    Serial.println("❌ Wi-Fi not connected – skipping send");
     return false;
   }
 
@@ -74,6 +71,7 @@ bool sendToServer(float temperature, float humidity) {
   http.begin(serverUrl);
   http.addHeader("Content-Type", "application/json");
 
+  // Build minimal JSON payload (matches your Supabase table)
   StaticJsonDocument<128> jsonDoc;
   jsonDoc["temperature"] = round(temperature * 100) / 100.0;
   jsonDoc["humidity"] = round(humidity * 100) / 100.0;
@@ -81,14 +79,20 @@ bool sendToServer(float temperature, float humidity) {
   String jsonString;
   serializeJson(jsonDoc, jsonString);
 
+  Serial.print("📤 Sending: ");
+  Serial.println(jsonString);
+
   int httpCode = http.POST(jsonString);
   String response = http.getString();
-
-  Serial.print("HTTP Response: ");
-  Serial.println(httpCode);
-
   http.end();
-  return (httpCode == 200 || httpCode == 201);
+
+  if (httpCode == 200 || httpCode == 201) {
+    Serial.println("✅ Success!");
+    return true;
+  } else {
+    Serial.printf("❌ HTTP %d: %s\n", httpCode, response.c_str());
+    return false;
+  }
 }
 
 void loop() {
@@ -101,27 +105,163 @@ void loop() {
     float temperature = dht.readTemperature();
 
     if (isnan(humidity) || isnan(temperature)) {
-      Serial.println("Failed to read from DHT sensor!");
+      Serial.println("⚠️ DHT22 read failed – skipping");
       return;
     }
 
-    Serial.printf("Temp: %.2f°C, Humidity: %.2f%%\n", temperature, humidity);
+    // Display current readings
+    Serial.printf("🌡️ Temp: %.2f°C | 💧 Humidity: %.2f%%\n", temperature, humidity);
 
-    bool changed = abs(temperature - lastTemperature) >= CHANGE_THRESHOLD ||
-                   abs(humidity - lastHumidity) >= CHANGE_THRESHOLD ||
-                   lastTemperature == 0;
+    // Check for significant change
+    bool tempChanged = abs(temperature - lastTemperature) >= CHANGE_THRESHOLD;
+    bool humidChanged = abs(humidity - lastHumidity) >= CHANGE_THRESHOLD;
+    bool isFirstRead = (lastTemperature == 0 && lastHumidity == 0);
 
-    if (changed) {
-      Serial.println("Change detected, sending to server...");
+    if (tempChanged || humidChanged || isFirstRead) {
+      Serial.println("🔔 Change detected – sending to server...");
       if (sendToServer(temperature, humidity)) {
         lastTemperature = temperature;
         lastHumidity = humidity;
-        Serial.println("✓ Sent successfully!");
-      } else {
-        Serial.println("✗ Failed to send data!");
       }
+    } else {
+      Serial.println("⏩ No significant change – skipping send");
     }
+
     Serial.println("----------------------------");
   }
+
   delay(50);
 }
+
+
+history 
+
+
+// /api/history.js
+const { createClient } = require('@supabase/supabase-js');
+
+module.exports = async (req, res) => {
+  const supabase = createClient(
+    'https://uappuwebcylzwndfaqxo.supabase.co',
+    process.env.SUPABASE_KEY
+  );
+
+  if (!process.env.SUPABASE_KEY) {
+    return res.status(500).json({ error: 'Missing API key' });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('readings')
+      .select('recorded_at, temperature, humidity')
+      .order('recorded_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error('History fetch error:', error.message);
+      return res.status(500).json({ error: 'Failed to fetch history' });
+    }
+
+    res.status(200).json(data || []);
+  } catch (err) {
+    console.error('Unexpected error:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+
+latest.js 
+
+
+
+const { createClient } = require('@supabase/supabase-js');
+
+module.exports = async (req, res) => {
+  const supabase = createClient(
+    'https://uappuwebcylzwndfaqxo.supabase.co',
+    process.env.SUPABASE_KEY
+  );
+
+  const { data, error } = await supabase
+    .from('readings')
+    .select('temperature, humidity, recorded_at')  // ✅ recorded_at
+    .order('recorded_at', { ascending: false })   // ✅ recorded_at
+    .limit(1);
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  res.json(data?.[0] || { temperature: null, humidity: null, recorded_at: null });
+};
+
+
+sensor   
+
+// /api/sensor.js
+const { createClient } = require('@supabase/supabase-js');
+
+module.exports = async (req, res) => {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Only POST allowed' });
+  }
+
+  let data;
+  try {
+    data = JSON.parse(req.body);
+  } catch (e) {
+    return res.status(400).json({ error: 'Invalid JSON' });
+  }
+
+  const { temperature, humidity } = data;
+
+  if (typeof temperature !== 'number' || typeof humidity !== 'number') {
+    return res.status(400).json({ error: 'temperature and humidity must be numbers' });
+  }
+
+  const supabase = createClient(
+    'https://uappuwebcylzwndfaqxo.supabase.co',
+    process.env.SUPABASE_KEY
+  );
+
+  if (!process.env.SUPABASE_KEY) {
+    console.error('❌ SUPABASE_KEY is missing');
+    return res.status(500).json({ error: 'Server misconfiguration' });
+  }
+
+  try {
+    // Fetch last reading using recorded_at
+    const { data: lastReadings, error: fetchErr } = await supabase
+      .from('readings')
+      .select('temperature, humidity')
+      .order('recorded_at', { ascending: false })
+      .limit(1);
+
+    if (fetchErr) {
+      console.error('Supabase fetch error:', fetchErr.message);
+      return res.status(500).json({ error: 'Database fetch failed' });
+    }
+
+    const last = lastReadings?.[0];
+    const hasChanged = !last ||
+      Math.abs(parseFloat(last.temperature) - temperature) > 0.1 ||
+      Math.abs(parseFloat(last.humidity) - humidity) > 0.1;
+
+    if (hasChanged) {
+      const { error: insertErr } = await supabase
+        .from('readings')
+        .insert([{ temperature, humidity }]); // recorded_at auto-filled by now()
+
+      if (insertErr) {
+        console.error('Supabase insert error:', insertErr.message);
+        return res.status(500).json({ error: 'Database insert failed' });
+      }
+    }
+
+    res.status(200).json({ success: true });
+  } catch (err) {
+    console.error('Unexpected error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+

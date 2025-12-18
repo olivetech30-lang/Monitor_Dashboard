@@ -20,7 +20,7 @@
         </div>
         <div>
           <div class="brand-name">ClimateCloud</div>
-          <div class="brand-sub">Real-time environmental monitoring</div>
+          <div class="brand-sub">Real-time environmental monitoringA</div>
         </div>
       </div>
 
@@ -33,7 +33,7 @@
       <nav class="nav">
         <button class="nav-item active" data-section="temperature">Temperature</button>
         <button class="nav-item" data-section="humidity">Humidity</button>
-        <button class="nav-item" data-section="history">History</button>
+        <button class="nav-item" data-section="data">Data</button>
         <button class="nav-item" data-section="settings">Settings</button>
       </nav>
       <div class="sidebar-footer">
@@ -70,6 +70,40 @@
           </div>
           <div class="meta">
             <div>Last update: <span id="humTs">—</span></div>
+          </div>
+        </article>
+
+        <article class="card span-2" id="dataCard">
+          <div class="card-head">
+            <h2>Timeseries Log</h2>
+            <div class="actions">
+              <button class="btn" id="refreshBtn">Refresh</button>
+              <button class="btn btn-ghost" id="clearUiBtn" title="Clears table on the page only">
+                Clear UI
+              </button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="table" aria-label="Temperature and humidity history">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Temperature (°C)</th>
+                  <th>Humidity (%)</th>
+                </tr>
+              </thead>
+              <tbody id="historyBody">
+                <tr>
+                  <td colspan="3" class="muted">No data yet. Send sensor readings to <code>/api/sensor</code>.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="meta row">
+            <div>Showing last <span id="historyCount">0</span> change events</div>
+            <div class="muted">Logs only when values change</div>
           </div>
         </article>
 

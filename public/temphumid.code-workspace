@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"name": "espfirm",
+			"path": "../espfirm"
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "temphumid"
+	}
+}

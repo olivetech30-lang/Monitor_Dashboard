@@ -1,39 +1,67 @@
+// /api/sensor.js
 const { createClient } = require('@supabase/supabase-js');
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
 module.exports = async (req, res) => {
-  // Allow browser and ESP32 access
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Only POST allowed' });
+  }
+
+  let data;
+  try {
+    data = JSON.parse(req.body);
+  } catch (e) {
+    return res.status(400).json({ error: 'Invalid JSON' });
+  }
+
+  const { temperature, humidity } = data;
+
+  if (typeof temperature !== 'number' || typeof humidity !== 'number') {
+    return res.status(400).json({ error: 'temperature and humidity must be numbers' });
+  }
+
+  const supabase = createClient(
+    'https://uappuwebcylzwndfaqxo.supabase.co',
+    process.env.SUPABASE_KEY
+  );
+
+  if (!process.env.SUPABASE_KEY) {
+    console.error('❌ SUPABASE_KEY is missing');
+    return res.status(500).json({ error: 'Server misconfiguration' });
+  }
 
   try {
-    const { temperature, humidity, deviceId = "esp32-s3" } = req.body;
-
-    // 1. Insert data into your 'readings' table
-    const { data, error } = await supabase
+    // Fetch last reading using recorded_at
+    const { data: lastReadings, error: fetchErr } = await supabase
       .from('readings')
-      .insert([{ temperature, humidity, device_id: deviceId }])
-      .select()
-      .single();
+      .select('temperature, humidity')
+      .order('recorded_at', { ascending: false })
+      .limit(1);
 
-    if (error) throw error;
+    if (fetchErr) {
+      console.error('Supabase fetch error:', fetchErr.message);
+      return res.status(500).json({ error: 'Database fetch failed' });
+    }
 
-    // 2. Return success to ESP32
-    return res.status(200).json({ 
-      ok: true, 
-      latest: { 
-        temperature: data.temperature, 
-        humidity: data.humidity, 
-        timestamp: data.created_at 
-      } 
-    });
+    const last = lastReadings?.[0];
+    const hasChanged = !last ||
+      Math.abs(parseFloat(last.temperature) - temperature) > 0.1 ||
+      Math.abs(parseFloat(last.humidity) - humidity) > 0.1;
+
+    if (hasChanged) {
+      const { error: insertErr } = await supabase
+        .from('readings')
+        .insert([{ temperature, humidity }]); // recorded_at auto-filled by now()
+
+      if (insertErr) {
+        console.error('Supabase insert error:', insertErr.message);
+        return res.status(500).json({ error: 'Database insert failed' });
+      }
+    }
+
+    res.status(200).json({ success: true });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: err.message });
+    console.error('Unexpected error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
+

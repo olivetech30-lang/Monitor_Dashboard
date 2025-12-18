@@ -1,32 +1,31 @@
+// /api/history.js
 const { createClient } = require('@supabase/supabase-js');
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
 module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  try {
-    const limit = parseInt(req.query.limit) || 100;
+  const supabase = createClient(
+    'https://uappuwebcylzwndfaqxo.supabase.co',
+    process.env.SUPABASE_KEY
+  );
 
+  if (!process.env.SUPABASE_KEY) {
+    return res.status(500).json({ error: 'Missing API key' });
+  }
+
+  try {
     const { data, error } = await supabase
       .from('readings')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(limit);
+      .select('recorded_at, temperature, humidity')
+      .order('recorded_at', { ascending: false })
+      .limit(50);
 
-    if (error) throw error;
+    if (error) {
+      console.error('History fetch error:', error.message);
+      return res.status(500).json({ error: 'Failed to fetch history' });
+    }
 
-    // Map Supabase rows to the format your app.js table expects
-    const history = data.map(row => ({
-      temperature: row.temperature,
-      humidity: row.humidity,
-      timestamp: row.created_at
-    }));
-
-    return res.status(200).json({ ok: true, history });
+    res.status(200).json(data || []);
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    console.error('Unexpected error:', err.message);
+    res.status(500).json({ error: 'Server error' });
   }
 };
