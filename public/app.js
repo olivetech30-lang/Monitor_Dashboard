@@ -259,6 +259,10 @@ function startPolling() {
 // FLASH CONTROLLER
 // ------------------------------
 
+// ------------------------------
+// FLASH CONTROLLER
+// ------------------------------
+
 const flashEls = {
   delayValue: document.getElementById("flashDelay"),
   status: document.getElementById("flashStatus"),
@@ -267,12 +271,14 @@ const flashEls = {
   slowerBtn: document.getElementById("slowerBtn"),
 };
 
+const MIN_DELAY = 50;
+const MAX_DELAY = 2000;
 let flashDelay = 500;
 
 function updateFlashController(delay) {
   flashDelay = delay;
-  flashEls.delayValue.textContent = delay;
-  flashEls.slider.value = delay;
+  if (flashEls.delayValue) flashEls.delayValue.textContent = delay;
+  if (flashEls.slider) flashEls.slider.value = delay;
 }
 
 // Poll for delay changes
@@ -280,10 +286,10 @@ async function pollFlashDelay() {
   try {
     const res = await fetch('/api/delay');
     const data = await res.json();
-    updateFlashController(data.delay);
-    flashEls.status.textContent = "Connected";
+    updateFlashController(data.delay || 500);
+    if (flashEls.status) flashEls.status.textContent = "Connected";
   } catch (e) {
-    flashEls.status.textContent = "Disconnected";
+    if (flashEls.status) flashEls.status.textContent = "Disconnected";
   }
 }
 
@@ -292,19 +298,15 @@ if (flashEls.slider) {
   flashEls.slider.addEventListener('input', async () => {
     const newDelay = parseInt(flashEls.slider.value);
     updateFlashController(newDelay);
-    
-    // Send to ESP32
     try {
-      const res = await fetch('/api/delay', {
+      await fetch('/api/delay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ delay: newDelay })
       });
-      if (res.ok) {
-        flashEls.status.textContent = "Connected";
-      }
+      if (flashEls.status) flashEls.status.textContent = "Connected";
     } catch (e) {
-      flashEls.status.textContent = "Error";
+      if (flashEls.status) flashEls.status.textContent = "Error";
     }
   });
 }
@@ -314,7 +316,6 @@ if (flashEls.fasterBtn) {
   flashEls.fasterBtn.addEventListener('click', () => {
     const newDelay = Math.max(MIN_DELAY, flashDelay - 50);
     updateFlashController(newDelay);
-    // Send to ESP32
     fetch('/api/delay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -327,7 +328,6 @@ if (flashEls.slowerBtn) {
   flashEls.slowerBtn.addEventListener('click', () => {
     const newDelay = Math.min(MAX_DELAY, flashDelay + 50);
     updateFlashController(newDelay);
-    // Send to ESP32
     fetch('/api/delay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -341,7 +341,6 @@ document.querySelectorAll('.btn[data-delay]').forEach(btn => {
   btn.addEventListener('click', () => {
     const delay = parseInt(btn.dataset.delay);
     updateFlashController(delay);
-    // Send to ESP32
     fetch('/api/delay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -352,3 +351,7 @@ document.querySelectorAll('.btn[data-delay]').forEach(btn => {
 
 // Start polling
 setInterval(pollFlashDelay, 3000);
+
+
+
+

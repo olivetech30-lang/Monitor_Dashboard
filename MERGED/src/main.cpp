@@ -1,6 +1,6 @@
 // ============================================
 // ESP32-S3 Combined Monitor + Flash Controller
-// Version 1.0
+// Version 1.0 - WITH PASSWORD
 // ============================================
 
 #include <Arduino.h>
@@ -9,12 +9,15 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <Adafruit_NeoPixel.h>
+#include <DHT.h>
 
 // ============================================
-// CONFIGURATION
+// CONFIGURATION - UPDATE PASSWORD BELOW!
 // ============================================
 
-const char* WIFI_SSID = "Wifi-Repeater";        // Open network
+const char* WIFI_SSID = "Eagle";
+const char* WIFI_PASSWORD = "eagle786"; // ← CHANGE THIS!
+
 const char* API_URL_SENSOR = "https://monitor-dashboard-newf.vercel.app/api/sensor";
 const char* API_URL_DELAY = "https://flash-controller-full.vercel.app/api/delay";
 
@@ -29,8 +32,8 @@ DHT dht(DHTPIN, DHTTYPE);
 #define PIXEL_BRIGHTNESS 150
 
 // Timing
-const unsigned long SENSOR_POLL_INTERVAL = 2000;   // Every 2 seconds
-const unsigned long DELAY_POLL_INTERVAL = 3000;     // Every 3 seconds
+const unsigned long SENSOR_POLL_INTERVAL = 2000;
+const unsigned long DELAY_POLL_INTERVAL = 3000;
 const unsigned long HTTP_TIMEOUT = 5000;
 
 // Delay limits
@@ -44,24 +47,20 @@ const int DEFAULT_DELAY = 500;
 
 Adafruit_NeoPixel pixel(NUM_PIXELS, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
-// Sensor variables
 float lastTemperature = 0;
 float lastHumidity = 0;
 const float CHANGE_THRESHOLD = 0.1;
 
-// LED variables
 volatile int blinkDelay = DEFAULT_DELAY;
 volatile bool ledState = false;
 unsigned long lastBlinkTime = 0;
 
 bool wifiConnected = false;
 
-// HTTP clients
 WiFiClientSecure secureClient;
 HTTPClient httpSensor;
 HTTPClient httpDelay;
 
-// Timing
 unsigned long previousSensorMillis = 0;
 unsigned long previousDelayMillis = 0;
 
@@ -80,30 +79,22 @@ void setup() {
     Serial.begin(115200);
     delay(500);
 
-    // Initialize DHT22
     dht.begin();
-
-    // Initialize NeoPixel
     pixel.begin();
     pixel.setBrightness(PIXEL_BRIGHTNESS);
     pixel.clear();
     pixel.show();
 
-    // Test LED
+    // LED test
     pixel.setPixelColor(0, pixel.Color(255, 0, 0)); pixel.show(); delay(200);
     pixel.setPixelColor(0, pixel.Color(0, 255, 0)); pixel.show(); delay(200);
     pixel.setPixelColor(0, pixel.Color(0, 0, 255)); pixel.show(); delay(200);
     pixel.clear(); pixel.show();
 
-    // Connect to WiFi
     connectToWiFi();
-
-    // Configure HTTPS
     secureClient.setInsecure();
 
     Serial.println("\n✅ System Ready!");
-
-    // Initialize timing
     previousSensorMillis = millis();
     previousDelayMillis = millis();
 }
@@ -112,14 +103,10 @@ void setup() {
 // MAIN LOOP
 // ============================================
 void loop() {
-    // Update LED first (highest priority)
     updateLED();
 
     unsigned long currentMillis = millis();
 
-    // =========================
-    // TASK 1: Send Sensor Data
-    // =========================
     if (currentMillis - previousSensorMillis >= SENSOR_POLL_INTERVAL) {
         previousSensorMillis = currentMillis;
         if (wifiConnected && WiFi.status() == WL_CONNECTED) {
@@ -129,9 +116,6 @@ void loop() {
         }
     }
 
-    // =========================
-    // TASK 2: Fetch LED Delay
-    // =========================
     if (currentMillis - previousDelayMillis >= DELAY_POLL_INTERVAL) {
         previousDelayMillis = currentMillis;
         if (wifiConnected && WiFi.status() == WL_CONNECTED) {
@@ -141,7 +125,7 @@ void loop() {
         }
     }
 
-    yield(); // Prevent watchdog reset
+    yield();
 }
 
 // ============================================
@@ -165,7 +149,7 @@ void connectToWiFi() {
     WiFi.disconnect(true, true);
     delay(100);
     WiFi.mode(WIFI_STA);
-    WiFi.begin(WIFI_SSID, ""); // Open network
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD); // ✅ Now uses password
 
     int attempts = 0;
     while (WiFi.status() != WL_CONNECTED && attempts < 30) {
@@ -181,6 +165,8 @@ void connectToWiFi() {
     } else {
         wifiConnected = false;
         Serial.println("\n❌ WiFi connection failed!");
+        Serial.print("[WiFi] Status code: ");
+        Serial.println(WiFi.status());
     }
 }
 
@@ -196,7 +182,6 @@ void sendSensorData() {
         return;
     }
 
-    // Check for significant change
     bool tempChanged = abs(temperature - lastTemperature) >= CHANGE_THRESHOLD;
     bool humidChanged = abs(humidity - lastHumidity) >= CHANGE_THRESHOLD;
 

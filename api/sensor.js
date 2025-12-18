@@ -11,7 +11,7 @@ function getRawBody(req) {
     });
     req.on('end', () => {
       resolve(body);
-    });
+    });g
     req.on('error', reject);
   });
 }
