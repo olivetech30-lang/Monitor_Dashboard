@@ -218,16 +218,11 @@ void sendSensorData() {
 // ============================================
 // FETCH DELAY FROM API
 // ============================================
-
-// ============================================
-// FETCH DELAY FROM API
-// ============================================
 void fetchDelayFromAPI() {
     httpDelay.begin(secureClient, API_URL_DELAY);
     httpDelay.addHeader("Content-Type", "application/json");
 
     int httpCode = httpDelay.GET();
-
     if (httpCode == HTTP_CODE_OK) {
         String payload = httpDelay.getString();
         StaticJsonDocument<256> doc;
